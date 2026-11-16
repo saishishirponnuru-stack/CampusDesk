@@ -1,5 +1,5 @@
 import { beforeAll, afterAll, describe, it, expect } from "vitest";
-import { MongoMemoryServer } from "mongodb-memory-server";
+import { testDatabase } from "./database.js";
 import mongoose from "mongoose";
 import request from "supertest";
 import { createApp } from "../src/app.js";
@@ -41,9 +41,7 @@ const courseData = {
 };
 const auth = () => ({ Authorization: "Bearer " + token });
 beforeAll(async () => {
-  mongo = await MongoMemoryServer.create({ binary: { version: "7.0.24" } });
-  await mongoose.connect(mongo.getUri("campusdesk_test"));
-  await Promise.all(Object.values(mongoose.models).map((m) => m.init()));
+  mongo = await testDatabase();
   app = createApp({
     secret: "test-secret-with-at-least-32-characters",
     logging: false,
@@ -52,7 +50,6 @@ beforeAll(async () => {
   await initAdmin({ email, password });
 }, 120000);
 afterAll(async () => {
-  await mongoose.disconnect();
   await mongo?.stop();
 });
 describe("Authentication and readiness", () => {

@@ -90,3 +90,11 @@ Final stable-source checks: 17 frontend tests passed; Playwright 18 passed / 2 r
 ### Nova delivery gallery
 
 Implementation commits 995c57e and 7b8b4ce are pushed. README, architecture/testing/deployment notes, case study, the 52-image gallery and NOVA_DELIVERY.md distinguish completed UI work from blocked persistence and deferred advanced workflows. A final gallery-capture rerun passed all 4 populated desktop/mobile/theme cases; modal captures use viewport bounds to avoid full-page backdrop artifacts. Documentation links and git diff --check passed. No production deployment is claimed.
+
+## Phase II — isolated verification milestone
+
+The direct fastdl.mongodb.org download remains denied; runtime policy does not contain the saved rule. Docker is available, and the official mongo:7.0.24 image was successfully pulled with layer integrity checks. The runner pins digest sha256:4c65244b50910461b9641a76131f84a2dcfd4da487f928298cea626b3842842c, uses tmpfs database storage and a randomly published loopback port, initializes a one-node replica set, and waits for primary readiness.
+
+Existing backend tests now support an explicit loopback-only TEST_MONGODB_URI, allocate unique campusdesk_test_* databases, and clean up only their own database. MONGODB_URI is never consumed by the tests. Root npm run verify:isolated orchestrates real integration tests, frontend checks/build, supervisor checks and browser tests, then closes APIs and removes its container. Desktop and mobile use separate disposable databases/APIs to preserve the production login rate limit and session-revocation semantics.
+
+Executed: all 37 original backend tests passed (14 unit + 23 database integration). Frontend 17 passed; supervisor 2 passed; build passed. The comprehensive authenticated academic journey passed on desktop and mobile: student edit/reload, compatible course/enrollment, attendance editing/persistence, grades, actual aggregates, CSV contents, grade thresholds, logout and revoked-token rejection. Browser runs: 11 desktop + 11 mobile passed, no skipped cases. The old mobile test's hidden-navigation assertion was corrected to check DOM attachment rather than visible accessibility-tree presence. New loopback isolation guard tests added for the runner. No Atlas access, seeding or production deployment occurred.

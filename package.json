@@ -10,6 +10,7 @@
     "dev:local": "node scripts/dev.js --local",
     "test:dev": "node --test scripts/dev.test.js",
     "test": "npm test --prefix backend && npm test --prefix frontend",
-    "build": "npm run build --prefix frontend"
+    "build": "npm run build --prefix frontend",
+    "verify:isolated": "node scripts/verify-isolated.js"
   }
 }

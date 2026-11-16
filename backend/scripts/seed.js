@@ -31,7 +31,7 @@ export async function seed() {
           status: "active",
         },
       },
-      { upsert: true, new: true, runValidators: true },
+      { upsert: true, returnDocument: "after", runValidators: true },
     );
     for (let j = 1; j <= 2; j++) {
       const course = await Course.findOneAndUpdate(
@@ -50,7 +50,7 @@ export async function seed() {
             facultyName: ["Dr. Avery Example", "Dr. Morgan Example"][j - 1],
           },
         },
-        { upsert: true, new: true, runValidators: true },
+        { upsert: true, returnDocument: "after", runValidators: true },
       );
       await Enrollment.updateOne(
         { student: student._id, course: course._id, term: academicYear },

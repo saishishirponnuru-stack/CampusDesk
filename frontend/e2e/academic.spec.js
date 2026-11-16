@@ -15,7 +15,10 @@ test("student lifecycle persists through reload and navigation", async ({
       .fill(process.env.E2E_ADMIN_PASSWORD);
     await page.getByRole("button", { name: /Sign in to workspace/ }).click();
     await expect(
-      page.getByRole("navigation", { name: "Main navigation" }),
+      page.getByRole("navigation", {
+        name: "Main navigation",
+        includeHidden: true,
+      }),
     ).toBeAttached();
   };
   await page.goto("/");
