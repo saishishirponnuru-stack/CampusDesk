@@ -1,0 +1,52 @@
+name: CampusDesk checks
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      MONGOMS_DOWNLOAD_DIR: /tmp/campusdesk-mongodb-binaries
+      ADMIN_EMAIL: ci-admin@example.test
+      ADMIN_PASSWORD: ci-only-isolated-password-123
+      E2E_ADMIN_EMAIL: ci-admin@example.test
+      E2E_ADMIN_PASSWORD: ci-only-isolated-password-123
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: |
+            backend/package-lock.json
+            frontend/package-lock.json
+      - run: npm ci --prefix backend
+      - run: npm ci --prefix frontend
+      - uses: actions/cache@v4
+        with:
+          path: /tmp/campusdesk-mongodb-binaries
+          key: mongodb-7.0.24-linux
+      - run: npm test --prefix backend
+      - run: npm test --prefix frontend
+      - run: npm run build --prefix frontend
+      - run: npx playwright install --with-deps chromium
+        working-directory: frontend
+      - name: Start isolated development API
+        run: |
+          npm run dev:local --prefix backend > /tmp/campusdesk-api.log 2>&1 &
+          for attempt in $(seq 1 60); do
+            if curl --fail --silent http://127.0.0.1:5000/api/health; then exit 0; fi
+            sleep 1
+          done
+          cat /tmp/campusdesk-api.log
+          exit 1
+      - run: npm run test:e2e --prefix frontend
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: browser-traces
+          path: frontend/test-results
+          retention-days: 7

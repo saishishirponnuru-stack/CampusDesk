@@ -1,4 +1,5 @@
 # CampusDesk
+
 Use Node 24 LTS. This cloud task is already isolated; use the existing checkout, not a worktree.
 Install with npm ci separately in backend and frontend. Never commit secrets or .env files.
 Backend: npm test, npm start (requires MONGODB_URI and JWT_SECRET).
