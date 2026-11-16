@@ -10,8 +10,17 @@ import {
   LineChart,
   Line,
 } from "recharts";
+import { Illustration } from "./components/Brand";
 import { ChartNoAxesCombined } from "lucide-react";
-export default function Chart({ title, description, data, line = false }) {
+export default function Chart({
+  title,
+  description,
+  data,
+  line = false,
+  onSelect,
+  unit = "",
+  valueKey = "count",
+}) {
   return (
     <section className="panel chart">
       <div className="panel-head">
@@ -27,7 +36,9 @@ export default function Chart({ title, description, data, line = false }) {
           aria-label={
             title +
             ": " +
-            data.map((item) => item._id + ": " + item.count).join(", ")
+            data
+              .map((item) => item._id + ": " + item[valueKey] + unit)
+              .join(", ")
           }
           style={{ width: "100%", height: 220 }}
         >
@@ -42,13 +53,23 @@ export default function Chart({ title, description, data, line = false }) {
                   />
                   <XAxis
                     dataKey="_id"
+                    tickFormatter={(value) =>
+                      String(value).length > 14
+                        ? String(value).slice(0, 12) + "…"
+                        : value
+                    }
                     tick={{ fill: "var(--muted)", fontSize: 11 }}
                   />
                   <YAxis
-                    allowDecimals={false}
+                    allowDecimals={unit === "%"}
+                    domain={unit === "%" ? [0, 100] : [0, "auto"]}
                     tick={{ fill: "var(--muted)", fontSize: 11 }}
                   />
                   <Tooltip
+                    formatter={(value) => [
+                      value + unit,
+                      unit === "%" ? "Percentage" : "Records",
+                    ]}
                     contentStyle={{
                       background: "var(--surface)",
                       borderColor: "var(--border)",
@@ -57,8 +78,9 @@ export default function Chart({ title, description, data, line = false }) {
                     cursor={{ fill: "var(--accent-soft)" }}
                   />
                   <Line
-                    type="monotone"
-                    dataKey="count"
+                    type="linear"
+                    isAnimationActive={false}
+                    dataKey={valueKey}
                     stroke="var(--accent)"
                     strokeWidth={3}
                   />
@@ -72,13 +94,23 @@ export default function Chart({ title, description, data, line = false }) {
                   />
                   <XAxis
                     dataKey="_id"
+                    tickFormatter={(value) =>
+                      String(value).length > 14
+                        ? String(value).slice(0, 12) + "…"
+                        : value
+                    }
                     tick={{ fill: "var(--muted)", fontSize: 10 }}
                   />
                   <YAxis
-                    allowDecimals={false}
+                    allowDecimals={unit === "%"}
+                    domain={unit === "%" ? [0, 100] : [0, "auto"]}
                     tick={{ fill: "var(--muted)", fontSize: 11 }}
                   />
                   <Tooltip
+                    formatter={(value) => [
+                      value + unit,
+                      unit === "%" ? "Percentage" : "Records",
+                    ]}
                     contentStyle={{
                       background: "var(--surface)",
                       borderColor: "var(--border)",
@@ -87,8 +119,9 @@ export default function Chart({ title, description, data, line = false }) {
                     cursor={{ fill: "var(--accent-soft)" }}
                   />
                   <Bar
-                    dataKey="count"
+                    dataKey={valueKey}
                     fill="var(--accent)"
+                    isAnimationActive={false}
                     radius={[5, 5, 0, 0]}
                     maxBarSize={44}
                   />
@@ -99,9 +132,32 @@ export default function Chart({ title, description, data, line = false }) {
         </div>
       ) : (
         <div className="empty">
+          <Illustration kind="reports" />
           <h3>No data yet</h3>
           <p>This chart will populate when records are added.</p>
         </div>
+      )}
+      {data?.length > 0 && (
+        <details className="chart-data">
+          <summary>View data{onSelect ? " & explore records" : ""}</summary>
+          <div>
+            {data.map((item, index) => (
+              <div className="chart-data-row" key={String(item._id) + index}>
+                {onSelect ? (
+                  <button onClick={() => onSelect(item._id)}>{item._id}</button>
+                ) : (
+                  <span>{item._id}</span>
+                )}
+                <strong>
+                  {Number(item[valueKey]).toLocaleString(undefined, {
+                    maximumFractionDigits: 1,
+                  })}
+                  {unit}
+                </strong>
+              </div>
+            ))}
+          </div>
+        </details>
       )}
     </section>
   );

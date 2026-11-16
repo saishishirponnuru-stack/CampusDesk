@@ -10,7 +10,10 @@ async function request(path, options = {}) {
   try {
     res = await fetch(base + "/api" + path, {
       ...options,
-      signal: options.signal || AbortSignal.timeout(30000),
+      signal:
+        options.signal && AbortSignal.any
+          ? AbortSignal.any([options.signal, AbortSignal.timeout(30000)])
+          : options.signal || AbortSignal.timeout(30000),
       headers: {
         ...(options.body ? { "Content-Type": "application/json" } : {}),
         ...(session ? { Authorization: "Bearer " + session } : {}),

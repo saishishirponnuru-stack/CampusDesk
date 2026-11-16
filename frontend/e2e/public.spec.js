@@ -9,8 +9,17 @@ test("login is responsive, labeled, and keyboard accessible", async ({
   await page.getByLabel("Email address").focus();
   await page.keyboard.type("admin@example.test");
   await page.keyboard.press("Tab");
-  await expect(page.getByLabel("Password")).toBeFocused();
+  await expect(page.getByLabel("Password", { exact: true })).toBeFocused();
   await page.keyboard.type("test-password");
+  await page.keyboard.press("Tab");
+  await expect(
+    page.getByRole("button", { name: "Show password" }),
+  ).toBeFocused();
+  await page.keyboard.press("Space");
+  await expect(page.getByLabel("Password", { exact: true })).toHaveAttribute(
+    "type",
+    "text",
+  );
   await page.keyboard.press("Tab");
   await expect(
     page.getByRole("button", { name: /Sign in to workspace/ }),

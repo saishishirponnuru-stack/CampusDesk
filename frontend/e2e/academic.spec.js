@@ -43,7 +43,9 @@ test("student lifecycle persists through reload and navigation", async ({
   await page.getByRole("button", { name: "Save record" }).click();
   await expect(page.getByRole("status")).toContainText("Record saved");
   await page.getByRole("textbox", { name: "Search records" }).fill(studentId);
-  const row = page.getByRole("row").filter({ hasText: studentId });
+  const row = page
+    .locator("tr:visible, article.mobile-record:visible")
+    .filter({ hasText: studentId });
   await expect(row).toBeVisible();
   await row.getByRole("link", { name: "E2E Example" }).click();
   await expect(
@@ -53,7 +55,9 @@ test("student lifecycle persists through reload and navigation", async ({
   await login();
   await page.getByRole("link", { name: "All students", exact: true }).click();
   await page.getByRole("textbox", { name: "Search records" }).fill(studentId);
-  const persisted = page.getByRole("row").filter({ hasText: studentId });
+  const persisted = page
+    .locator("tr:visible, article.mobile-record:visible")
+    .filter({ hasText: studentId });
   await expect(persisted).toBeVisible();
   await persisted.getByRole("button", { name: "Edit student" }).click();
   await page.getByLabel("First name", { exact: true }).fill("Updated");

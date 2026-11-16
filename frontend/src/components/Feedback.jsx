@@ -1,4 +1,5 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useId } from "react";
+import { Illustration } from "./Brand";
 import { AlertCircle, ClipboardList, X } from "lucide-react";
 export function Message({ error, children }) {
   return (
@@ -20,17 +21,25 @@ export function Loading() {
   );
 }
 export function Empty({
+  kind = "records",
   text = "No records yet. Add your first record to get started.",
 }) {
   return (
     <div className="empty">
-      <ClipboardList size={30} />
+      <Illustration kind={kind} />
       <h3>Nothing here yet</h3>
       <p>{text}</p>
     </div>
   );
 }
-export function Modal({ title, children, onClose }) {
+export function Modal({
+  title,
+  children,
+  onClose,
+  className = "",
+  busy = false,
+}) {
+  const titleId = useId();
   const dialog = useRef(null);
   useEffect(() => {
     const d = dialog.current;
@@ -40,6 +49,8 @@ export function Modal({ title, children, onClose }) {
   return (
     <dialog
       ref={dialog}
+      className={className}
+      aria-busy={busy}
       onCancel={(event) => {
         event.preventDefault();
         onClose();
@@ -47,14 +58,15 @@ export function Modal({ title, children, onClose }) {
       onClick={(e) => {
         if (e.target === dialog.current) onClose();
       }}
-      aria-labelledby="dialog-title"
+      aria-labelledby={titleId}
     >
       <div className="dialog-head">
-        <h2 id="dialog-title">{title}</h2>
+        <h2 id={titleId}>{title}</h2>
         <button
           className="icon-button"
           aria-label="Close dialog"
           onClick={onClose}
+          disabled={busy}
         >
           <X size={20} />
         </button>

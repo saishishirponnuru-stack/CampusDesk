@@ -2,7 +2,8 @@ import React from "react";
 import { describe, it, expect, vi, afterEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { Login, Modal } from "../src/main";
+import { Login } from "../src/features/Login";
+import { Modal } from "../src/components/Feedback";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 const wrapper = ({ children }) => (
   <QueryClientProvider
@@ -102,7 +103,7 @@ describe("Academic forms", () => {
         json: async () => ({ items: [] }),
       }),
     );
-    const { RecordForm } = await import("../src/main");
+    const { RecordForm } = await import("../src/features/Records");
     render(
       <RecordForm
         kind="grades"
@@ -132,7 +133,7 @@ describe("Academic forms", () => {
       json: async () => ({ items: [] }),
     });
     vi.stubGlobal("fetch", fetcher);
-    const { RecordForm } = await import("../src/main"),
+    const { RecordForm } = await import("../src/features/Records"),
       user = userEvent.setup();
     render(
       <RecordForm
@@ -162,7 +163,7 @@ describe("Academic forms", () => {
       .fn()
       .mockResolvedValue({ ok: true, status: 200, json: async () => ({}) });
     vi.stubGlobal("fetch", fetcher);
-    const { RecordForm } = await import("../src/main"),
+    const { RecordForm } = await import("../src/features/Records"),
       user = userEvent.setup(),
       close = vi.fn();
     render(
@@ -208,7 +209,7 @@ it("keeps unsaved academic edits unless discard is confirmed", async () => {
     this.removeAttribute("open");
   };
   const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
-  const { RecordForm } = await import("../src/main");
+  const { RecordForm } = await import("../src/features/Records");
   const close = vi.fn(),
     user = userEvent.setup();
   render(<RecordForm kind="students" onClose={close} />, { wrapper });

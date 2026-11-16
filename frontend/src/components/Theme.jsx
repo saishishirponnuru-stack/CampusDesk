@@ -52,3 +52,34 @@ export function ThemeSelector() {
     </label>
   );
 }
+
+export function ThemeSettings() {
+  const context = useContext(ThemeContext);
+  if (!context) return null;
+  return (
+    <div
+      className="theme-previews"
+      role="group"
+      aria-label="Appearance preference"
+    >
+      {Object.entries(modes).map(([mode, Icon]) => (
+        <button
+          key={mode}
+          className={"theme-preview " + mode}
+          aria-pressed={context.theme === mode}
+          onClick={() => context.setTheme(mode)}
+        >
+          <span className="mini-workspace">
+            <i />
+            <i />
+            <i />
+          </span>
+          <span>
+            <Icon size={15} />
+            {mode[0].toUpperCase() + mode.slice(1)}
+          </span>
+        </button>
+      ))}
+    </div>
+  );
+}

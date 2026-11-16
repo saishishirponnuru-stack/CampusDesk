@@ -66,3 +66,15 @@ Root `npm run dev` and `npm run dev:local` coordinate both existing services, pr
 Root `npm ci` and the two supervisor tests passed. A live invocation without MONGODB_URI exited 1 and shut down the frontend. A successful database-backed root startup remains unverified for the same infrastructure/credential blockers above. CI now includes root supervisor checks. Documentation includes restart steps, real fixture-labeled screenshots, an architecture diagram, a case study, and the completion matrix.
 
 Cloud configuration draft save was confirmed for install_script, start_skill and the fastdl.mongodb.org allowlist addition. This neither activated network access nor published a snapshot. Review/save in environment settings and publish remain user actions. Git commits are pushed to the existing implementation branch without force; PR #1 is not merged or closed by this work.
+
+## CampusDesk Nova / 3.0 — product milestone (2026-11-16)
+
+Continued from 39dcc50 on campusdesk-implementation without recreating the project. No Atlas access, database changes, backend source changes, migrations, force pushes or PR merge/close operations.
+
+Implemented an original courtyard-C/record-rail identity and favicon, original SVG navigation/illustrations, self-hosted Manrope (OFL license shipped), semantic light/dark tokens, selective navigation/search glass, reduced-motion/transparency fallbacks, a branded login with password visibility, a keyboard-managed mobile drawer, and keyboard search. Feature pages are extracted and route-lazy-loaded; bootstrap is isolated so hot reload does not recreate the React root.
+
+Dashboard uses only existing API reports, with real weighted assessment summaries and working filtered navigation/creation shortcuts. Student/course mobile cards, course detail and paginated roster, tabbed student history, grouped validated forms, enrollment/attendance status filters, and report selection/accessible chart data/CSV feedback are integrated with existing endpoints. Native dialogs retain unsaved edits when discard is declined.
+
+Validation so far: 17 frontend component/client tests passed; 14 backend unit tests passed. A stable-source full browser run passed 16 cases and skipped 2 authenticated persistence tests; two contrast-test cases initially failed because the helper did not expand shorthand hex colors. After correcting that helper, all 4 preference/contrast cases passed in a targeted rerun. Visual/keyboard defects found during browser review (password label, decorative initials, mobile focus, narrow filters) were fixed and rechecked. A separate earlier run was invalidated by editing source during browser execution; it is not used as final evidence. Final whole-suite evidence follows in the delivery milestone.
+
+The 23-test MongoDB integration suite remains blocked during beforeAll by official binary download HTTP 403. The saved draft includes fastdl.mongodb.org, but current runtime metadata confirms that domain is not enabled. No verification was disabled and no Atlas fallback was attempted. Bulk attendance, CSV imports, audit history and RBAC remain deferred behind real isolated database verification.

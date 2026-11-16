@@ -1,163 +1,46 @@
-import React, { useState, useEffect, lazy, Suspense } from "react";
-import { createRoot } from "react-dom/client";
+import React, { useState, useEffect, useRef, lazy, Suspense } from "react";
 import {
-  BrowserRouter,
   Routes,
   Route,
   Navigate,
   NavLink,
   Link,
   useLocation,
-  useNavigate,
-  useParams,
 } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import {
-  QueryClient,
-  QueryClientProvider,
-  useQuery,
-  useMutation,
-  useQueryClient,
-} from "@tanstack/react-query";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
-import {
-  GraduationCap,
-  LayoutDashboard,
-  Users,
-  BookOpen,
-  ClipboardList,
-  CalendarCheck,
-  ChartNoAxesCombined,
   Settings,
   LogOut,
-  Search,
-  Plus,
   ChevronLeft,
   ChevronRight,
   Menu,
-  Pencil,
-  Trash2,
-  ArrowUpRight,
-  Download,
-  Check,
+  X,
 } from "lucide-react";
-const LazyChart = lazy(() => import("./Chart"));
-const Chart = (props) => (
-  <Suspense fallback={<Loading />}>
-    <LazyChart {...props} />
-  </Suspense>
-);
-import { api, setToken, download } from "./api";
+import { api, setToken } from "./api";
 import { modules, label } from "./config";
-import "./styles.css";
-import { Message, Loading, Empty, Modal } from "./components/Feedback";
-export { Modal } from "./components/Feedback";
+import { Loading } from "./components/Feedback";
 import { GlobalSearch } from "./components/GlobalSearch";
 import { ThemeProvider, ThemeSelector } from "./components/Theme";
-const client = new QueryClient({
-  defaultOptions: {
-    queries: { retry: 1, staleTime: 15000, refetchOnWindowFocus: false },
-  },
-});
-const icons = {
-  dashboard: LayoutDashboard,
-  students: Users,
-  courses: BookOpen,
-  enrollments: ClipboardList,
-  attendance: CalendarCheck,
-  grades: GraduationCap,
-  reports: ChartNoAxesCombined,
-  settings: Settings,
-};
-const useData = (key, path) =>
-  useQuery({ queryKey: key, queryFn: () => api(path) });
-export function Login({ onLogin }) {
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-  } = useForm({
-    resolver: zodResolver(
-      z.object({
-        email: z.email("Enter a valid email"),
-        password: z.string().min(1, "Enter your password"),
-      }),
-    ),
-  });
-  const mutation = useMutation({
-    mutationFn: (values) =>
-      api("/auth/login", { method: "POST", body: JSON.stringify(values) }),
-    onSuccess: (data) => {
-      setToken(data.token);
-      onLogin(true);
-    },
-  });
-  return (
-    <main className="login">
-      <section className="login-brand">
-        <div className="brand">
-          <GraduationCap size={30} /> CampusDesk
-        </div>
-        <div>
-          <span className="eyebrow">ACADEMIC ADMINISTRATION</span>
-          <h1>
-            A clearer view of
-            <br />
-            campus life.
-          </h1>
-          <p>
-            Students, courses, and academic progress.
-            <br />
-            One thoughtful workspace for your institution.
-          </p>
-        </div>
-        <small>Built for the people behind student success.</small>
-      </section>
-      <section className="login-form">
-        <div className="login-appearance">
-          <ThemeSelector />
-        </div>
-        <form onSubmit={handleSubmit((v) => mutation.mutate(v))}>
-          <span className="eyebrow">ADMINISTRATOR ACCESS</span>
-          <h1>Welcome back</h1>
-          <p className="muted">Sign in to your CampusDesk workspace.</p>
-          <label>
-            Email address
-            <input
-              autoComplete="username"
-              type="email"
-              {...register("email")}
-            />
-            {errors.email && (
-              <small className="field-error">{errors.email.message}</small>
-            )}
-          </label>
-          <label>
-            Password
-            <input
-              type="password"
-              autoComplete="current-password"
-              {...register("password")}
-            />
-            {errors.password && (
-              <small className="field-error">{errors.password.message}</small>
-            )}
-          </label>
-          {mutation.error && <Message error>{mutation.error.message}</Message>}
-          <button className="primary" disabled={mutation.isPending}>
-            {mutation.isPending ? "Signing in…" : "Sign in to workspace"}{" "}
-            <ArrowUpRight size={17} />
-          </button>
-          <p className="login-note">
-            Administrator accounts are provisioned by your institution. Sessions
-            expire after 15 minutes.
-          </p>
-        </form>
-      </section>
-    </main>
-  );
-}
+import { Brand, AcademicIcon } from "./components/Brand";
+import { Login } from "./features/Login";
+import "./styles.css";
+const Dashboard = lazy(() => import("./features/Dashboard"));
+const Records = lazy(() => import("./features/Records"));
+const StudentProfile = lazy(() => import("./features/StudentProfile"));
+const CourseProfile = lazy(() => import("./features/CourseProfile"));
+const Reports = lazy(() => import("./features/Reports"));
+const SettingsPage = lazy(() => import("./features/Settings"));
+import { client } from "./queryClient";
+const navItems = [
+  "dashboard",
+  "students",
+  "courses",
+  "enrollments",
+  "attendance",
+  "grades",
+  "reports",
+  "settings",
+];
 export function App() {
   return (
     <ThemeProvider>
@@ -171,6 +54,59 @@ function Workspace() {
   const [collapsed, setCollapsed] = useState(false);
   const [sessionNotice, setSessionNotice] = useState("");
   const location = useLocation();
+  const drawer = useRef(null),
+    menuButton = useRef(null),
+    main = useRef(null);
+  useEffect(() => {
+    const media = window.matchMedia("(max-width: 640px)");
+    const closeDesktop = () => {
+      if (!media.matches) setMobile(false);
+    };
+    media.addEventListener("change", closeDesktop);
+    return () => media.removeEventListener("change", closeDesktop);
+  }, []);
+  useEffect(() => {
+    if (!mobile) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const panel = drawer.current;
+    const focusClose = () =>
+      panel?.querySelector(".mobile-close")?.focus({ preventScroll: true });
+    const focusFrame = requestAnimationFrame(focusClose);
+    const visible = (event) => {
+      if (event.target === panel && !panel.contains(document.activeElement))
+        focusClose();
+    };
+    panel?.addEventListener("transitionend", visible);
+    const keys = (event) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        setMobile(false);
+      }
+      if (event.key !== "Tab") return;
+      const targets = [...drawer.current.querySelectorAll("a, button")].filter(
+        (el) => el.getClientRects().length,
+      );
+      const first = targets[0],
+        last = targets.at(-1);
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last?.focus();
+      }
+      if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first?.focus();
+      }
+    };
+    window.addEventListener("keydown", keys);
+    return () => {
+      cancelAnimationFrame(focusFrame);
+      panel?.removeEventListener("transitionend", visible);
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", keys);
+      menuButton.current?.focus();
+    };
+  }, [mobile]);
   const me = useQuery({
     queryKey: ["me"],
     queryFn: () => api("/auth/me"),
@@ -193,7 +129,14 @@ function Workspace() {
   }, []);
   useEffect(() => {
     setMobile(false);
-  }, [location.pathname]);
+    document.title =
+      "CampusDesk · " +
+      (signedIn
+        ? label(location.pathname.split("/")[1] || "dashboard")
+        : "Sign in");
+    main.current?.focus({ preventScroll: true });
+    window.scrollTo(0, 0);
+  }, [location.pathname, signedIn]);
   if (!signedIn)
     return (
       <>
@@ -216,10 +159,22 @@ function Workspace() {
       <a className="skip" href="#main">
         Skip to content
       </a>
-      <aside className={mobile ? "sidebar open" : "sidebar"}>
+      <aside
+        ref={drawer}
+        className={mobile ? "sidebar open" : "sidebar"}
+        role={mobile ? "dialog" : undefined}
+        aria-modal={mobile || undefined}
+        aria-label={mobile ? "Workspace navigation" : undefined}
+      >
+        <button
+          className="mobile-close icon-button"
+          aria-label="Close navigation"
+          onClick={() => setMobile(false)}
+        >
+          <X size={20} />
+        </button>
         <Link className="brand" to="/">
-          <GraduationCap size={27} />
-          <span className="brand-text">CampusDesk</span>
+          <Brand />
         </Link>
         <button
           className="collapse-toggle icon-button"
@@ -232,12 +187,12 @@ function Workspace() {
         <div className="workspace">
           <span className="workspace-icon">CD</span>
           <div>
-            Academic workspace<small>Administration</small>
+            Academic workspace<small>Your institution, connected</small>
           </div>
         </div>
-        <span className="nav-label">WORKSPACE</span>
+        <span className="nav-label">Workspace</span>
         <nav aria-label="Main navigation">
-          {Object.entries(icons).map(([key, Icon]) => (
+          {navItems.map((key) => (
             <NavLink
               key={key}
               to={key === "dashboard" ? "/" : "/" + key}
@@ -245,7 +200,11 @@ function Workspace() {
               title={label(key)}
               aria-label={label(key)}
             >
-              <Icon size={19} />
+              {key === "settings" ? (
+                <Settings size={20} />
+              ) : (
+                <AcademicIcon kind={key} size={21} />
+              )}
               <span className="nav-text">{label(key)}</span>
             </NavLink>
           ))}
@@ -274,21 +233,24 @@ function Workspace() {
       {mobile && (
         <button
           className="scrim"
-          aria-label="Close navigation"
+          aria-hidden="true"
+          tabIndex={-1}
           onClick={() => setMobile(false)}
         />
       )}
-      <div className="main-wrap">
+      <div className="main-wrap" inert={mobile ? true : undefined}>
         <header className="topbar">
           <button
+            ref={menuButton}
             aria-label="Open navigation"
+            aria-expanded={mobile}
             className="mobile-toggle icon-button"
             onClick={() => setMobile(!mobile)}
           >
             <Menu />
           </button>
           <span className="muted">
-            Workspace <span className="slash">/</span>{" "}
+            <span>Workspace</span> <span className="slash">/</span>{" "}
             <strong>{label(current)}</strong>
           </span>
           <div className="topbar-right">
@@ -303,1126 +265,31 @@ function Workspace() {
             </Link>
           </div>
         </header>
-        <main id="main" tabIndex="-1">
-          <Routes>
-            <Route path="/" element={<Dashboard />} />
-            {Object.keys(modules).map((kind) => (
-              <Route
-                key={kind}
-                path={"/" + kind}
-                element={<Records key={kind} kind={kind} />}
-              />
-            ))}
-            <Route path="/students/:id" element={<StudentProfile />} />
-            <Route path="/reports" element={<Reports />} />
-            <Route
-              path="/settings"
-              element={<SettingsPage me={me} logout={logout} />}
-            />
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-          <footer>
-            CampusDesk <span>Thoughtful academic administration</span>
-          </footer>
+        <main id="main" ref={main} tabIndex="-1">
+          <div key={location.pathname} className="page-enter">
+            <Suspense fallback={<Loading />}>
+              <Routes>
+                <Route path="/" element={<Dashboard />} />
+                {Object.keys(modules).map((kind) => (
+                  <Route
+                    key={kind}
+                    path={"/" + kind}
+                    element={<Records key={kind} kind={kind} />}
+                  />
+                ))}
+                <Route path="/students/:id" element={<StudentProfile />} />
+                <Route path="/courses/:id" element={<CourseProfile />} />
+                <Route path="/reports" element={<Reports />} />
+                <Route
+                  path="/settings"
+                  element={<SettingsPage me={me} logout={logout} />}
+                />
+                <Route path="*" element={<Navigate to="/" replace />} />
+              </Routes>
+            </Suspense>
+          </div>
         </main>
       </div>
     </div>
   );
 }
-function Heading({ title, description, action }) {
-  return (
-    <div className="page-heading">
-      <div>
-        <span className="eyebrow">CAMPUSDESK / WORKSPACE</span>
-        <h1>{title}</h1>
-        <p className="muted">{description}</p>
-      </div>
-      {action}
-    </div>
-  );
-}
-function Dashboard() {
-  const q = useData(["reports"], "/reports");
-  return (
-    <>
-      <Heading
-        title="Campus overview"
-        description="A live view of your institution, all in one place."
-        action={
-          <Link className="primary" to="/students">
-            <Plus size={17} />
-            Manage students
-          </Link>
-        }
-      />
-      {q.isPending ? (
-        <Loading />
-      ) : q.error ? (
-        <Message error>{q.error.message}</Message>
-      ) : (
-        <>
-          <div className="stats">
-            {[
-              [
-                "Total students",
-                q.data.metrics.students,
-                Users,
-                "Registered student records",
-              ],
-              [
-                "Active students",
-                q.data.metrics.activeStudents,
-                GraduationCap,
-                "Student records with active status",
-              ],
-              [
-                "Courses",
-                q.data.metrics.courses,
-                BookOpen,
-                q.data.metrics.enrollments + " course enrollments",
-              ],
-              [
-                "Attendance",
-                q.data.metrics.attendancePercentage === null
-                  ? "—"
-                  : q.data.metrics.attendancePercentage.toFixed(1) + "%",
-                CalendarCheck,
-                "Present + late / recorded sessions",
-              ],
-            ].map(([title, value, Icon, note]) => (
-              <section className="stat" key={title}>
-                <div>
-                  <span>{title}</span>
-                  <Icon size={19} />
-                </div>
-                <strong>{value}</strong>
-                <small>{note}</small>
-              </section>
-            ))}
-          </div>
-          <div className="grid-two">
-            <Chart
-              title="Students by department"
-              description="Distribution across academic departments"
-              data={q.data.departments}
-            />
-            <Chart
-              title="Enrollment activity"
-              description="New course enrollments by month"
-              data={q.data.enrollmentTrends}
-              line
-            />
-          </div>
-          <div className="grid-two">
-            <section className="panel">
-              <div className="panel-head">
-                <div>
-                  <h2>Recently added students</h2>
-                  <p>The latest additions to your campus</p>
-                </div>
-                <Link to="/students">
-                  View all <ArrowUpRight size={14} />
-                </Link>
-              </div>
-              {q.data.recentStudents.length ? (
-                q.data.recentStudents.map((s) => (
-                  <Link
-                    key={s._id}
-                    className="recent"
-                    to={"/students/" + s._id}
-                  >
-                    <span className="student-avatar">
-                      {s.firstName[0]}
-                      {s.lastName[0]}
-                    </span>
-                    <div>
-                      <strong>
-                        {s.firstName} {s.lastName}
-                      </strong>
-                      <small>{s.studentId}</small>
-                    </div>
-                    <time>{new Date(s.createdAt).toLocaleDateString()}</time>
-                  </Link>
-                ))
-              ) : (
-                <Empty />
-              )}
-            </section>
-            <section className="panel">
-              <div className="panel-head">
-                <div>
-                  <h2>Keep your campus moving</h2>
-                  <p>Everyday academic operations</p>
-                </div>
-              </div>
-              <div className="quick-links">
-                {[
-                  [
-                    "attendance",
-                    "Record attendance",
-                    "Keep each session up to date",
-                  ],
-                  [
-                    "grades",
-                    "Manage assessments",
-                    "Track academic achievement",
-                  ],
-                  [
-                    "reports",
-                    "Explore reports",
-                    "Turn records into useful insights",
-                  ],
-                ].map(([key, title, description]) => {
-                  const Icon = icons[key];
-                  return (
-                    <Link key={key} to={"/" + key}>
-                      <span className="quick-icon">
-                        <Icon size={22} />
-                      </span>
-                      <div>
-                        <strong>{title}</strong>
-                        <small>{description}</small>
-                      </div>
-                      <ArrowUpRight size={18} />
-                    </Link>
-                  );
-                })}
-              </div>
-              <div className="info-note">
-                Live data, clear decisions. Dashboard figures come directly from
-                your institution’s records.
-              </div>
-            </section>
-          </div>
-          <section className="panel">
-            <div className="panel-head">
-              <div>
-                <h2>Recent academic activity</h2>
-                <p>Most recently updated records across your workspace</p>
-              </div>
-            </div>
-            {q.data.recentActivity?.length ? (
-              q.data.recentActivity.map((activity) => (
-                <Link
-                  key={activity.module + activity.id}
-                  className="recent"
-                  to={
-                    activity.module === "students"
-                      ? "/students/" + activity.id
-                      : "/" + activity.module
-                  }
-                >
-                  <span className="student-avatar">
-                    <ClipboardList size={16} />
-                  </span>
-                  <div>
-                    <strong>{activity.title}</strong>
-                    <small>{activity.detail}</small>
-                  </div>
-                  <time>{new Date(activity.updatedAt).toLocaleString()}</time>
-                </Link>
-              ))
-            ) : (
-              <Empty text="Academic activity will appear as records are created and updated." />
-            )}
-          </section>
-        </>
-      )}
-    </>
-  );
-}
-export function RecordForm({ kind, record, onClose }) {
-  const config = modules[kind],
-    qc = useQueryClient();
-  const [relationSearch, setRelationSearch] = useState({
-    student: "",
-    course: "",
-  });
-  const relationKind = ["enrollments", "attendance", "grades"].includes(kind);
-  const students = useQuery({
-    queryKey: ["student-options", relationSearch.student],
-    queryFn: () =>
-      api(
-        "/students?limit=100&search=" +
-          encodeURIComponent(relationSearch.student),
-      ),
-    enabled: relationKind,
-  });
-  const courses = useQuery({
-    queryKey: ["course-options", relationSearch.course],
-    queryFn: () =>
-      api(
-        "/courses?limit=100&search=" +
-          encodeURIComponent(relationSearch.course),
-      ),
-    enabled: relationKind,
-  });
-  const shape = Object.fromEntries(
-    config.fields.map((f) => [
-      f.key,
-      f.type === "number"
-        ? z.coerce
-            .number()
-            .min(f.key === "marks" ? 0 : 1)
-            .max(f.key === "semester" ? 12 : f.key === "credits" ? 10 : 100000)
-        : f.key === "email"
-          ? z.email()
-          : f.key === "phone"
-            ? z.string().max(30)
-            : z.string().trim().min(1, "Required").max(254),
-    ]),
-  );
-  let schema = z.object(shape);
-  if (kind === "grades")
-    schema = schema.refine((v) => v.marks <= v.maxMarks, {
-      message: "Marks cannot exceed maximum",
-      path: ["marks"],
-    });
-  const defaults = Object.fromEntries(
-    config.fields.map((f) => [
-      f.key,
-      record?.[f.key]?._id ??
-        record?.[f.key] ??
-        (f.type === "select"
-          ? f.options[0]
-          : f.key === "date"
-            ? new Date().toISOString().slice(0, 10)
-            : ""),
-    ]),
-  );
-  const {
-    register,
-    handleSubmit,
-    formState: { errors, isDirty },
-  } = useForm({ defaultValues: defaults, resolver: zodResolver(schema) });
-  const mutation = useMutation({
-    mutationFn: (values) =>
-      api("/" + kind + (record ? "/" + record._id : ""), {
-        method: record ? "PUT" : "POST",
-        body: JSON.stringify(values),
-      }),
-    onSuccess: () => {
-      qc.invalidateQueries();
-      onClose("Record saved successfully.");
-    },
-  });
-  const close = () => {
-    if (mutation.isPending) return;
-    if (!isDirty || window.confirm("Discard your unsaved changes?")) onClose();
-  };
-  useEffect(() => {
-    if (!isDirty) return;
-    const warn = (event) => {
-      event.preventDefault();
-      event.returnValue = "";
-    };
-    window.addEventListener("beforeunload", warn);
-    return () => window.removeEventListener("beforeunload", warn);
-  }, [isDirty]);
-  return (
-    <Modal
-      title={(record ? "Edit " : "Add ") + config.singular}
-      onClose={close}
-    >
-      <form onSubmit={handleSubmit((v) => mutation.mutate(v))}>
-        <div className="form-grid">
-          {config.fields.map((f) => (
-            <label key={f.key}>
-              {f.label}
-              {f.key === "phone" ? <small>Optional</small> : null}
-              {f.type === "select" ? (
-                <select required {...register(f.key)}>
-                  {f.options.map((o) => (
-                    <option key={o} value={o}>
-                      {label(o)}
-                    </option>
-                  ))}
-                </select>
-              ) : ["student", "course"].includes(f.type) ? (
-                <>
-                  <input
-                    aria-label={"Search " + f.label.toLowerCase() + " options"}
-                    placeholder={"Search " + f.label.toLowerCase() + "…"}
-                    value={relationSearch[f.type]}
-                    onChange={(e) =>
-                      setRelationSearch({
-                        ...relationSearch,
-                        [f.type]: e.target.value,
-                      })
-                    }
-                  />
-                  <select required {...register(f.key)}>
-                    <option value="">Select {f.label.toLowerCase()}</option>
-                    {record?.[f.key]?._id &&
-                      !(
-                        f.type === "student" ? students : courses
-                      ).data?.items.some(
-                        (o) => o._id === record[f.key]._id,
-                      ) && (
-                        <option value={record[f.key]._id}>
-                          {record[f.key].studentId || record[f.key].code}
-                        </option>
-                      )}
-                    {(f.type === "student"
-                      ? students
-                      : courses
-                    ).data?.items.map((o) => (
-                      <option value={o._id} key={o._id}>
-                        {f.type === "student"
-                          ? o.studentId + " · " + o.firstName + " " + o.lastName
-                          : o.code + " · " + o.name}
-                      </option>
-                    ))}
-                  </select>
-                  {(f.type === "student" ? students : courses).error && (
-                    <small className="field-error">
-                      Unable to load options
-                    </small>
-                  )}
-                  <small>Search to find records beyond the first 100.</small>
-                </>
-              ) : (
-                <input
-                  type={f.type}
-                  required={f.key !== "phone"}
-                  step={
-                    f.key === "marks" || f.key === "maxMarks"
-                      ? "any"
-                      : undefined
-                  }
-                  {...register(f.key)}
-                />
-              )}{" "}
-              {errors[f.key] && (
-                <small className="field-error">{errors[f.key].message}</small>
-              )}
-            </label>
-          ))}
-        </div>
-        {relationKind && (
-          <p className="info-note">
-            Student and course must share department, semester, and academic
-            year. Term must match the course academic year.
-          </p>
-        )}
-        {mutation.error && <Message error>{mutation.error.message}</Message>}
-        <div className="dialog-actions">
-          <button type="button" onClick={close}>
-            Cancel
-          </button>
-          <button className="primary" disabled={mutation.isPending}>
-            {mutation.isPending ? "Saving…" : "Save record"}
-          </button>
-        </div>
-      </form>
-    </Modal>
-  );
-}
-const display = (row, key) => {
-  if (key === "fullName") return row.firstName + " " + row.lastName;
-  if (key === "student")
-    return row.student
-      ? row.student.firstName + " " + row.student.lastName
-      : "Unavailable";
-  if (key === "course")
-    return typeof row.course === "string"
-      ? row.course
-      : row.course?.name || "Unavailable";
-  if (key === "percentage") return Number(row.percentage).toFixed(1) + "%";
-  return String(row[key] ?? "—");
-};
-function Records({ kind }) {
-  const location = useLocation();
-  const config = modules[kind],
-    qc = useQueryClient(),
-    [search, setSearch] = useState(
-      () => new URLSearchParams(location.search).get("search") || "",
-    ),
-    [filters, setFilters] = useState({}),
-    [page, setPage] = useState(1),
-    [sort, setSort] = useState(
-      kind === "students"
-        ? "studentId"
-        : kind === "courses"
-          ? "code"
-          : "createdAt",
-    ),
-    [order, setOrder] = useState("asc"),
-    [editing, setEditing] = useState(null),
-    [deleting, setDeleting] = useState(null),
-    [notice, setNotice] = useState("");
-  const [debounced, setDebounced] = useState(search);
-  useEffect(() => {
-    setSearch(new URLSearchParams(location.search).get("search") || "");
-    setPage(1);
-  }, [location.search]);
-  useEffect(() => {
-    const t = setTimeout(() => setDebounced(search), 250);
-    return () => clearTimeout(t);
-  }, [search]);
-  const params = new URLSearchParams({
-    search: debounced,
-    page,
-    limit: 12,
-    sort,
-    order,
-    ...filters,
-  });
-  const [courseSearch, setCourseSearch] = useState("");
-  const courseOptions = useQuery({
-    queryKey: ["filter-courses", courseSearch],
-    queryFn: () =>
-      api("/courses?limit=100&search=" + encodeURIComponent(courseSearch)),
-    enabled: ["enrollments", "attendance", "grades"].includes(kind),
-  });
-  const q = useData([kind, params.toString()], "/" + kind + "?" + params);
-  const del = useMutation({
-    mutationFn: (id) => api("/" + kind + "/" + id, { method: "DELETE" }),
-    onSuccess: () => {
-      qc.invalidateQueries();
-      setDeleting(null);
-      setPage(1);
-      setNotice("Record removed.");
-    },
-  });
-  const change = (key, value) => {
-    setFilters({ ...filters, [key]: value });
-    setPage(1);
-  };
-  return (
-    <>
-      <Heading
-        title={config.title}
-        description={config.description}
-        action={
-          <button
-            className="primary"
-            onClick={() => {
-              setEditing({});
-              setNotice("");
-            }}
-          >
-            <Plus size={17} />
-            Add {config.singular}
-          </button>
-        }
-      />
-      {notice && <Message>{notice}</Message>}
-      <section className="panel records">
-        <div className="toolbar">
-          {["students", "courses"].includes(kind) && (
-            <div className="search">
-              <Search size={17} />
-              <input
-                aria-label="Search records"
-                placeholder={
-                  kind === "students"
-                    ? "Search name, ID, or email…"
-                    : "Search courses…"
-                }
-                value={search}
-                onChange={(e) => {
-                  setSearch(e.target.value);
-                  setPage(1);
-                }}
-              />
-            </div>
-          )}
-          {["students", "courses"].includes(kind) && (
-            <>
-              <input
-                aria-label="Filter by department"
-                placeholder="Department"
-                value={filters.department || ""}
-                onChange={(e) => change("department", e.target.value)}
-              />
-              <input
-                aria-label="Filter by academic year"
-                placeholder="Academic year"
-                value={filters.academicYear || ""}
-                onChange={(e) => change("academicYear", e.target.value)}
-              />
-            </>
-          )}
-          {["students", "courses"].includes(kind) && (
-            <select
-              aria-label="Filter by semester"
-              value={filters.semester || ""}
-              onChange={(e) => change("semester", e.target.value)}
-            >
-              <option value="">All semesters</option>
-              {Array.from({ length: 12 }, (_, i) => (
-                <option key={i + 1} value={i + 1}>
-                  Semester {i + 1}
-                </option>
-              ))}
-            </select>
-          )}
-          {kind === "students" && (
-            <select
-              aria-label="Filter by status"
-              value={filters.status || ""}
-              onChange={(e) => change("status", e.target.value)}
-            >
-              <option value="">All statuses</option>
-              {["active", "inactive", "graduated"].map((s) => (
-                <option key={s}>{s}</option>
-              ))}
-            </select>
-          )}
-          {["enrollments", "attendance", "grades"].includes(kind) && (
-            <>
-              <input
-                aria-label="Search course filter options"
-                placeholder="Find a course…"
-                value={courseSearch}
-                onChange={(e) => setCourseSearch(e.target.value)}
-              />
-              <select
-                aria-label="Filter by course"
-                value={filters.course || ""}
-                onChange={(e) => change("course", e.target.value)}
-              >
-                <option value="">All courses</option>
-                {courseOptions.data?.items.map((c) => (
-                  <option value={c._id} key={c._id}>
-                    {c.code} · {c.name}
-                  </option>
-                ))}
-              </select>
-            </>
-          )}
-          {kind === "enrollments" && (
-            <input
-              aria-label="Filter by academic term"
-              placeholder="Academic term"
-              value={filters.term || ""}
-              onChange={(e) => change("term", e.target.value)}
-            />
-          )}
-          {kind === "attendance" && (
-            <input
-              aria-label="Filter by date"
-              type="date"
-              value={filters.date || ""}
-              onChange={(e) => change("date", e.target.value)}
-            />
-          )}
-          {(search || Object.values(filters).some(Boolean)) && (
-            <button
-              onClick={() => {
-                setSearch("");
-                setDebounced("");
-                setFilters({});
-                setCourseSearch("");
-                setPage(1);
-              }}
-            >
-              Clear filters
-            </button>
-          )}
-          <select
-            aria-label="Sort records"
-            value={sort}
-            onChange={(e) => {
-              setSort(e.target.value);
-              setPage(1);
-            }}
-          >
-            {[
-              "createdAt",
-              ...(kind === "students"
-                ? ["studentId", "firstName", "department"]
-                : kind === "courses"
-                  ? ["code", "name", "department"]
-                  : kind === "attendance"
-                    ? ["date"]
-                    : []),
-            ].map((key) => (
-              <option key={key} value={key}>
-                Sort: {label(key)}
-              </option>
-            ))}
-          </select>
-          <button
-            aria-label="Toggle sort order"
-            onClick={() => setOrder(order === "asc" ? "desc" : "asc")}
-          >
-            {order === "asc" ? "↑ Asc" : "↓ Desc"}
-          </button>
-        </div>
-        {q.isPending ? (
-          <Loading />
-        ) : q.error ? (
-          <Message error>{q.error.message}</Message>
-        ) : q.data.items.length ? (
-          <>
-            <div className="table-scroll">
-              <table>
-                <thead>
-                  <tr>
-                    {config.columns.map((key) => (
-                      <th key={key}>{label(key)}</th>
-                    ))}
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {q.data.items.map((row) => (
-                    <tr key={row._id}>
-                      {config.columns.map((key) => (
-                        <td key={key}>
-                          {key === "status" ? (
-                            <span className={"badge " + row[key]}>
-                              {label(row[key])}
-                            </span>
-                          ) : kind === "students" && key === "fullName" ? (
-                            <Link
-                              className="student-name"
-                              to={"/students/" + row._id}
-                            >
-                              <span className="student-avatar">
-                                {row.firstName[0]}
-                                {row.lastName[0]}
-                              </span>
-                              {display(row, key)}
-                            </Link>
-                          ) : (
-                            display(row, key)
-                          )}
-                        </td>
-                      ))}
-                      <td>
-                        <div className="row-actions">
-                          <button
-                            className="icon-button"
-                            aria-label={"Edit " + config.singular}
-                            onClick={() => {
-                              setEditing(row);
-                              setNotice("");
-                            }}
-                          >
-                            <Pencil size={16} />
-                          </button>
-                          <button
-                            className="icon-button danger"
-                            aria-label={"Delete " + config.singular}
-                            onClick={() => {
-                              del.reset();
-                              setDeleting(row);
-                            }}
-                          >
-                            <Trash2 size={16} />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            <div className="pagination">
-              <span>
-                {q.data.total} records · Page {page} of{" "}
-                {Math.max(1, q.data.pages)}
-              </span>
-              <div>
-                <button
-                  aria-label="Previous page"
-                  disabled={page === 1}
-                  onClick={() => setPage(page - 1)}
-                >
-                  <ChevronLeft size={16} />
-                </button>
-                <button
-                  aria-label="Next page"
-                  disabled={page >= q.data.pages}
-                  onClick={() => setPage(page + 1)}
-                >
-                  <ChevronRight size={16} />
-                </button>
-              </div>
-            </div>
-          </>
-        ) : (
-          <Empty />
-        )}
-      </section>
-      {editing && (
-        <RecordForm
-          kind={kind}
-          record={editing._id ? editing : null}
-          onClose={(message) => {
-            setEditing(null);
-            if (message) setNotice(message);
-          }}
-        />
-      )}
-      {deleting && (
-        <Modal
-          title={"Delete " + config.singular + "?"}
-          onClose={() => setDeleting(null)}
-        >
-          <p className="dialog-copy">
-            This permanently removes the selected record. Records with dependent
-            academic data cannot be removed.
-          </p>
-          {del.error && <Message error>{del.error.message}</Message>}
-          <div className="dialog-actions">
-            <button onClick={() => setDeleting(null)}>Cancel</button>
-            <button
-              className="danger-button"
-              disabled={del.isPending}
-              onClick={() => del.mutate(deleting._id)}
-            >
-              {del.isPending ? "Deleting…" : "Confirm deletion"}
-            </button>
-          </div>
-        </Modal>
-      )}
-    </>
-  );
-}
-function StudentProfile() {
-  const { id } = useParams(),
-    q = useData(["profile", id], "/students/" + id + "/history");
-  if (q.isPending) return <Loading />;
-  if (q.error) return <Message error>{q.error.message}</Message>;
-  const { student, attendancePercentage, attendance, grades, enrollments } =
-    q.data;
-  return (
-    <>
-      <Link className="back" to="/students">
-        <ChevronLeft size={16} />
-        All students
-      </Link>
-      <Heading
-        title={student.firstName + " " + student.lastName}
-        description={student.studentId + " · " + student.department}
-      />
-      <section className="panel profile">
-        <span className="student-avatar large">
-          {student.firstName[0]}
-          {student.lastName[0]}
-        </span>
-        <div className="detail-grid">
-          {modules.students.fields.map((f) => (
-            <div key={f.key}>
-              <small>{f.label}</small>
-              <strong>{student[f.key] || "—"}</strong>
-            </div>
-          ))}
-          <div>
-            <small>Created</small>
-            <strong>{new Date(student.createdAt).toLocaleString()}</strong>
-          </div>
-          <div>
-            <small>Updated</small>
-            <strong>{new Date(student.updatedAt).toLocaleString()}</strong>
-          </div>
-        </div>
-      </section>
-      <div className="profile-attendance">
-        <h2>
-          Attendance:{" "}
-          {attendancePercentage === null
-            ? "No recorded sessions"
-            : attendancePercentage.toFixed(1) + "%"}
-        </h2>
-        {attendancePercentage !== null && attendancePercentage < 75 && (
-          <Message error>
-            Low attendance: below the 75% advisory threshold.
-          </Message>
-        )}
-        <p className="muted">
-          Present and late count as attended; missing records are excluded.
-          History lists show up to 500 entries; attendance percentage uses all
-          records.
-        </p>
-      </div>
-      {[
-        ["Enrolled courses", enrollments, ["course", "term", "status"]],
-        ["Attendance history", attendance, ["course", "date", "status"]],
-        [
-          "Academic results",
-          grades,
-          ["course", "assessment", "marks", "maxMarks", "percentage", "letter"],
-        ],
-      ].map(([title, rows, columns]) => (
-        <section className="panel history" key={title}>
-          <div className="panel-head">
-            <h2>{title}</h2>
-            {title === "Academic results" && grades.length > 0 && (
-              <span className="muted">
-                Recorded assessments:{" "}
-                {(
-                  (grades.reduce((n, g) => n + g.marks, 0) /
-                    grades.reduce((n, g) => n + g.maxMarks, 0)) *
-                  100
-                ).toFixed(1)}
-                %
-              </span>
-            )}
-          </div>
-          <SimpleTable rows={rows} columns={columns} />
-        </section>
-      ))}
-    </>
-  );
-}
-function SimpleTable({ rows, columns }) {
-  return rows.length ? (
-    <div className="table-scroll">
-      <table>
-        <thead>
-          <tr>
-            {columns.map((c) => (
-              <th key={c}>{label(c)}</th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((r, i) => (
-            <tr key={r._id || i}>
-              {columns.map((c) => (
-                <td key={c}>
-                  {c === "course" && typeof r.course === "object"
-                    ? r.course.name
-                    : display(r, c)}
-                </td>
-              ))}
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  ) : (
-    <Empty text="No recorded data for this report." />
-  );
-}
-function Reports() {
-  const q = useData(["reports"], "/reports"),
-    [error, setError] = useState("");
-  return (
-    <>
-      <Heading
-        title="Academic reports"
-        description="Database-driven insights, ready to explore and export."
-      />
-      {error && <Message error>{error}</Message>}
-      {q.isPending ? (
-        <Loading />
-      ) : q.error ? (
-        <Message error>{q.error.message}</Message>
-      ) : (
-        <>
-          <div className="grid-two">
-            <Chart
-              title="Department distribution"
-              description="All student records by department"
-              data={q.data.departments}
-            />
-            <Chart
-              title="Academic year distribution"
-              description="Students by academic year"
-              data={q.data.years}
-            />
-          </div>
-          {[
-            ["departments", ["_id", "count"]],
-            ["years", ["_id", "count"]],
-            ["courseEnrollments", ["course", "count"]],
-            [
-              "attendance",
-              ["course", "department", "recorded", "attended", "percentage"],
-            ],
-            [
-              "performance",
-              ["course", "assessments", "marks", "maxMarks", "percentage"],
-            ],
-          ].map(([type, columns]) => (
-            <section className="panel history" key={type}>
-              <div className="panel-head">
-                <h2>{label(type)}</h2>
-                <button
-                  onClick={() =>
-                    download(type).catch((e) => setError(e.message))
-                  }
-                >
-                  <Download size={16} />
-                  Export CSV
-                </button>
-              </div>
-              <SimpleTable rows={q.data[type]} columns={columns} />
-            </section>
-          ))}
-          <p className="muted">
-            Performance percentages use total marks divided by total maximum
-            marks. No GPA is calculated.
-          </p>
-        </>
-      )}
-    </>
-  );
-}
-function SettingsPage({ me, logout }) {
-  const qc = useQueryClient(),
-    { register, handleSubmit, reset } = useForm(),
-    [saved, setSaved] = useState(""),
-    [thresholds, setThresholds] = useState("");
-  useEffect(() => {
-    if (me.data)
-      setThresholds(
-        me.data.thresholds.map((t) => t.label + ":" + t.minimum).join(", "),
-      );
-  }, [me.data]);
-  const password = useMutation({
-    mutationFn: (v) =>
-      api("/auth/password", { method: "POST", body: JSON.stringify(v) }),
-    onSuccess: () => {
-      reset();
-      logout();
-    },
-  });
-  const grades = useMutation({
-    mutationFn: () =>
-      api("/auth/thresholds", {
-        method: "PUT",
-        body: JSON.stringify({
-          thresholds: thresholds.split(",").map((t) => {
-            const [label, minimum] = t.trim().split(":");
-            return { label, minimum: Number(minimum) };
-          }),
-        }),
-      }),
-    onSuccess: () => {
-      qc.invalidateQueries();
-      setSaved("Grade thresholds saved.");
-    },
-  });
-  return (
-    <>
-      <Heading
-        title="Settings"
-        description="Your account, academic preferences, and workspace information."
-      />
-      {me.error && <Message error>{me.error.message}</Message>}
-      <section className="panel setting appearance-setting">
-        <div>
-          <h2>Appearance</h2>
-          <p>Choose a theme, or follow your device. Saved in this browser.</p>
-        </div>
-        <ThemeSelector />
-      </section>
-      <div className="settings-grid">
-        <section className="panel setting">
-          <h2>Administrator profile</h2>
-          <div className="profile-line">
-            <span className="avatar large">{me.data?.name?.[0]}</span>
-            <div>
-              <strong>{me.data?.name}</strong>
-              <p>{me.data?.email}</p>
-              <span className="badge active">Administrator</span>
-            </div>
-          </div>
-          <button
-            onClick={async () => {
-              try {
-                await api("/auth/logout", { method: "POST" });
-              } finally {
-                logout();
-              }
-            }}
-          >
-            <LogOut size={16} />
-            Log out of all sessions
-          </button>
-        </section>
-        <section className="panel setting">
-          <h2>Change password</h2>
-          <p>At least 12 characters. Changing your password signs you out.</p>
-          <form onSubmit={handleSubmit((v) => password.mutate(v))}>
-            <label>
-              Current password
-              <input
-                type="password"
-                autoComplete="current-password"
-                required
-                {...register("currentPassword")}
-              />
-            </label>
-            <label>
-              New password
-              <input
-                type="password"
-                autoComplete="new-password"
-                minLength={12}
-                maxLength={128}
-                required
-                {...register("newPassword")}
-              />
-            </label>
-            {password.error && (
-              <Message error>{password.error.message}</Message>
-            )}
-            <button className="primary" disabled={password.isPending}>
-              Update password
-            </button>
-          </form>
-        </section>
-        <section className="panel setting">
-          <h2>Grade thresholds</h2>
-          <p>
-            Format: label:minimum percentage. Include zero. Grades use the
-            highest qualifying threshold.
-          </p>
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              grades.mutate();
-            }}
-          >
-            <label>
-              Thresholds
-              <input
-                required
-                value={thresholds}
-                onChange={(e) => {
-                  setThresholds(e.target.value);
-                  setSaved("");
-                }}
-              />
-            </label>
-            {grades.error && <Message error>{grades.error.message}</Message>}
-            {saved && <Message>{saved}</Message>}
-            <button className="primary" disabled={grades.isPending}>
-              Save thresholds
-            </button>
-          </form>
-        </section>
-        <section className="panel setting">
-          <h2>About CampusDesk</h2>
-          <p>Version 1.0.0</p>
-          <p>
-            Academic records, course administration, attendance, and assessment
-            reporting.
-          </p>
-          <div className="info-note">
-            Sessions last 15 minutes. Your token is kept in memory and is
-            cleared when you reload or close this page.
-          </div>
-        </section>
-      </div>
-    </>
-  );
-}
-if (document.getElementById("root"))
-  createRoot(document.getElementById("root")).render(
-    <React.StrictMode>
-      <QueryClientProvider client={client}>
-        <BrowserRouter>
-          <App />
-        </BrowserRouter>
-      </QueryClientProvider>
-    </React.StrictMode>,
-  );

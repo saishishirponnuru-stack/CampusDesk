@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { Search } from "lucide-react";
@@ -42,6 +42,7 @@ export function GlobalSearch() {
   );
 }
 function SearchDialog({ onClose }) {
+  const content = useRef(null);
   const [search, setSearch] = useState("");
   const [term, setTerm] = useState("");
   useEffect(() => {
@@ -50,19 +51,43 @@ function SearchDialog({ onClose }) {
   }, [search]);
   const results = useQuery({
     queryKey: ["global-search", term],
-    queryFn: async () => {
+    queryFn: async ({ signal }) => {
       const query = "?limit=6&search=" + encodeURIComponent(term);
       const [students, courses] = await Promise.all([
-        api("/students" + query),
-        api("/courses" + query),
+        api("/students" + query, { signal }),
+        api("/courses" + query, { signal }),
       ]);
       return { students: students.items, courses: courses.items };
     },
     enabled: term.length >= 2,
   });
   return (
-    <Modal title="Search workspace" onClose={onClose}>
-      <div className="command-content">
+    <Modal
+      title="Search workspace"
+      onClose={onClose}
+      className="command-surface"
+    >
+      <div
+        className="command-content"
+        ref={content}
+        onKeyDown={(event) => {
+          if (!["ArrowDown", "ArrowUp"].includes(event.key)) return;
+          const links = [...content.current.querySelectorAll("a[href]")];
+          if (!links.length) return;
+          event.preventDefault();
+          const position = links.indexOf(document.activeElement);
+          const next =
+            position < 0
+              ? event.key === "ArrowDown"
+                ? 0
+                : links.length - 1
+              : (position +
+                  (event.key === "ArrowDown" ? 1 : -1) +
+                  links.length) %
+                links.length;
+          links[next].focus();
+        }}
+      >
         <label>
           Search students, courses, or pages
           <input
@@ -74,8 +99,8 @@ function SearchDialog({ onClose }) {
           />
         </label>
         <p className="command-hint">
-          Type at least two characters to search records. Up to six results per
-          category.
+          Search records with 2+ characters. ↑ ↓ to navigate, Enter to open. Up
+          to six results per category.
         </p>
         <nav aria-label="Page shortcuts">
           {["Dashboard", ...pages]

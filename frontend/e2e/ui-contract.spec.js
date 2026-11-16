@@ -174,11 +174,24 @@ for (const theme of ["light", "dark"])
     });
     for (const width of [320, 768, 1366, 1920]) {
       await page.setViewportSize({ width, height: 900 });
-      expect(
-        await page.evaluate(
-          () => document.documentElement.scrollWidth <= innerWidth,
-        ),
-      ).toBe(true);
+      await expect
+        .poll(
+          async () =>
+            page.evaluate(() => ({
+              width: innerWidth,
+              page: document.documentElement.scrollWidth,
+              overflow: [...document.querySelectorAll("body *")]
+                .filter(
+                  (el) =>
+                    el.getBoundingClientRect().right > innerWidth + 1 &&
+                    getComputedStyle(el).visibility !== "hidden",
+                )
+                .slice(0, 8)
+                .map((el) => el.className),
+            })),
+          { timeout: 3000 },
+        )
+        .toMatchObject({ width, page: width });
     }
     expect(errors).toEqual([]);
   });
