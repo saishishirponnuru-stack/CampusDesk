@@ -24,7 +24,10 @@ import { ThemeProvider, ThemeSelector } from "./components/Theme";
 import { Brand, AcademicIcon } from "./components/Brand";
 import { Login } from "./features/Login";
 import "./styles.css";
+import "./styles/operations.css";
 const Dashboard = lazy(() => import("./features/Dashboard"));
+const AttendanceRegister = lazy(() => import("./features/AttendanceRegister"));
+const StudentImport = lazy(() => import("./features/StudentImport"));
 const Records = lazy(() => import("./features/Records"));
 const StudentProfile = lazy(() => import("./features/StudentProfile"));
 const CourseProfile = lazy(() => import("./features/CourseProfile"));
@@ -270,6 +273,11 @@ function Workspace() {
             <Suspense fallback={<Loading />}>
               <Routes>
                 <Route path="/" element={<Dashboard />} />
+                <Route
+                  path="/attendance/register"
+                  element={<AttendanceRegister />}
+                />
+                <Route path="/students/import" element={<StudentImport />} />
                 {Object.keys(modules).map((kind) => (
                   <Route
                     key={kind}

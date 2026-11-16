@@ -1,6 +1,9 @@
 import { defineConfig, devices } from "@playwright/test";
 export default defineConfig({
   testDir: "./e2e",
+  outputDir: process.env.E2E_ARTIFACT_PROJECT
+    ? `test-results/${process.env.E2E_ARTIFACT_PROJECT}`
+    : "test-results",
   fullyParallel: false,
   workers: process.env.E2E_ADMIN_EMAIL ? 1 : undefined,
   use: {

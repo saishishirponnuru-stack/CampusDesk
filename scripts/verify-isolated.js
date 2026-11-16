@@ -21,7 +21,11 @@ let api,
 async function stopChild(process) {
   if (!process || process.exitCode !== null) return;
   const done = new Promise((resolve) => process.once("exit", resolve));
-  process.kill("SIGTERM");
+  try {
+    globalThis.process.kill(-process.pid, "SIGTERM");
+  } catch {
+    process.kill("SIGTERM");
+  }
   await done;
 }
 async function cleanup() {
@@ -35,7 +39,12 @@ for (const signal of ["SIGINT", "SIGTERM"])
   process.on(signal, () => cleanup().then(() => process.exit(1)));
 async function run(args, env) {
   await new Promise((resolve, reject) => {
-    child = spawn("npm", args, { cwd: root, env, stdio: "inherit" });
+    child = spawn("npm", args, {
+      cwd: root,
+      env,
+      stdio: "inherit",
+      detached: true,
+    });
     child.once("error", reject);
     child.once("exit", (code) =>
       code === 0
@@ -105,7 +114,8 @@ try {
   };
   delete env.MONGODB_URI;
   delete env.JWT_SECRET;
-  delete env.VITE_API_URL;
+  env.VITE_API_URL = "";
+  env.CI = "1";
   await run(["test", "--prefix", "backend"], env);
   await run(["test", "--prefix", "frontend"], env);
   await run(["run", "test:dev"], env);
@@ -116,24 +126,38 @@ try {
     api = spawn(process.execPath, ["scripts/test-api.js"], {
       cwd: root + "backend",
       env,
-      stdio: "inherit",
+      stdio: ["inherit", "inherit", "inherit", "ipc"],
+      detached: true,
     });
-    let ready = false;
-    for (let attempt = 0; attempt < 60; attempt++) {
-      if (api.exitCode !== null)
-        throw new Error("Isolated API exited during startup");
-      try {
-        if ((await fetch("http://127.0.0.1:5000/api/health")).ok) {
-          ready = true;
-          break;
+    await new Promise((resolve, reject) => {
+      const timer = setTimeout(
+        () => reject(new Error("Owned API readiness timed out")),
+        15000,
+      );
+      api.once("message", (message) => {
+        if (message.type === "ready") {
+          clearTimeout(timer);
+          resolve();
         }
-      } catch {}
-      await delay(250);
-    }
-    if (!ready) throw new Error("Isolated API readiness failed");
+      });
+      api.once("exit", () => {
+        clearTimeout(timer);
+        reject(new Error("Owned API exited before readiness"));
+      });
+    });
+    if (!(await fetch("http://127.0.0.1:5000/api/health")).ok)
+      throw new Error("Owned API health check failed");
     await run(
-      ["run", "test:e2e", "--prefix", "frontend", "--", "--project=" + project],
-      env,
+      [
+        "run",
+        "test:e2e",
+        "--prefix",
+        "frontend",
+        "--",
+        "--project=" + project,
+        ...process.argv.slice(2),
+      ],
+      { ...env, E2E_ARTIFACT_PROJECT: project },
     );
     await stopChild(api);
     api = null;

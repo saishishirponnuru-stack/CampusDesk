@@ -13,8 +13,10 @@ import {
   passwordSchema,
   thresholdSchema,
 } from "./validators/index.js";
+import { operationRoutes } from "./controllers/operations.js";
 import { routes, studentHistory } from "./controllers/records.js";
-import { reports, csv } from "./services/reports.js";
+import { reportQuery } from "./validators/reports.js";
+import { reports, reportColumns, reportCsv } from "./services/reports.js";
 export function createApp({
   secret,
   origins = ["http://localhost:5173"],
@@ -33,7 +35,10 @@ export function createApp({
         callback(null, !origin || origins.includes(origin));
       },
     }),
-    express.json({ limit: "100kb" }),
+    (req, res, next) =>
+      express.json({
+        limit: req.path.startsWith("/api/students/import") ? "160kb" : "100kb",
+      })(req, res, next),
   );
   if (logging)
     app.use(
@@ -46,12 +51,10 @@ export function createApp({
     );
   app.get("/api/health", (req, res) => {
     const ready = mongoose.connection.readyState === 1;
-    res
-      .status(ready ? 200 : 503)
-      .json({
-        status: ready ? "ok" : "unavailable",
-        database: ready ? "connected" : "disconnected",
-      });
+    res.status(ready ? 200 : 503).json({
+      status: ready ? "ok" : "unavailable",
+      database: ready ? "connected" : "disconnected",
+    });
   });
   const authLimit = rateLimit({
     windowMs: 15 * 60 * 1000,
@@ -102,6 +105,7 @@ export function createApp({
     await req.admin.save();
     res.json(profile(req.admin));
   });
+  operationRoutes(api);
   api.get("/students/:id/history", studentHistory);
   for (const kind of [
     "students",
@@ -111,24 +115,18 @@ export function createApp({
     "grades",
   ])
     routes(api, kind);
-  api.get("/reports", async (req, res) => res.json(await reports()));
+  api.get("/reports", async (req, res) =>
+    res.json(await reports(reportQuery.parse(req.query))),
+  );
   api.get("/reports/:type.csv", async (req, res) => {
-    const data = await reports();
     const type = req.params.type;
-    if (
-      ![
-        "departments",
-        "years",
-        "courseEnrollments",
-        "attendance",
-        "performance",
-      ].includes(type)
-    )
+    if (!Object.hasOwn(reportColumns, type))
       throw fail(404, "Report not found");
+    const data = await reports(reportQuery.parse(req.query));
     res
       .type("text/csv")
       .attachment(type + ".csv")
-      .send(csv(data[type]));
+      .send(reportCsv(type, data[type]));
   });
   app.use("/api", api);
   app.use((req, res) =>
@@ -136,13 +134,11 @@ export function createApp({
   );
   app.use((err, req, res, next) => {
     if (err instanceof ZodError)
-      return res
-        .status(422)
-        .json({
-          message: err.issues
-            .map((i) => i.path.join(".") + ": " + i.message)
-            .join("; "),
-        });
+      return res.status(422).json({
+        message: err.issues
+          .map((i) => i.path.join(".") + ": " + i.message)
+          .join("; "),
+      });
     if (err.code === 11000)
       return res
         .status(409)
@@ -160,12 +156,13 @@ export function createApp({
     const status = err.status || 500;
     if (status === 500 && logging)
       console.error("API request failed:", err.name);
-    res
-      .status(status)
-      .json({
-        message:
-          status >= 500 ? "Service temporarily unavailable" : err.message,
-      });
+    res.status(status).json({
+      message:
+        status >= 500 && !err.publicMessage
+          ? "Service temporarily unavailable"
+          : err.message,
+      ...(status < 500 && err.issues ? { issues: err.issues } : {}),
+    });
   });
   return app;
 }

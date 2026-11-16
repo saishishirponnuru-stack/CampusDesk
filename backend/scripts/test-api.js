@@ -13,9 +13,10 @@ const app = createApp({
   secret: randomBytes(48).toString("hex"),
   logging: false,
 });
-const server = app.listen(5000, "127.0.0.1", () =>
-  console.log("Isolated test API ready"),
-);
+const server = app.listen(5000, "127.0.0.1", () => {
+  console.log("Isolated test API ready");
+  process.send?.({ type: "ready" });
+});
 let stopping = false;
 for (const signal of ["SIGINT", "SIGTERM"])
   process.on(signal, () => {

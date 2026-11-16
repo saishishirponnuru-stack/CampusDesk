@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import {
   Student,
   Course,
@@ -5,7 +6,45 @@ import {
   Attendance,
   Grade,
 } from "../models/index.js";
-export async function reports() {
+export async function reports(query = {}) {
+  const academic = Object.fromEntries(
+    ["department", "academicYear", "semester"]
+      .filter((key) => query[key] !== undefined)
+      .map((key) => [key, query[key]]),
+  );
+  const courseFilter = {
+    ...academic,
+    ...(query.term ? { $and: [{ academicYear: query.term }] } : {}),
+    ...(query.course ? { _id: new mongoose.Types.ObjectId(query.course) } : {}),
+  };
+  const courseIds = Object.keys(courseFilter).length
+    ? await Course.distinct("_id", courseFilter)
+    : null;
+  const courseScope = courseIds ? { course: { $in: courseIds } } : {};
+  const enrollmentScope = {
+    ...courseScope,
+    ...(query.term ? { term: query.term } : {}),
+  };
+  const studentFilter = { ...academic };
+  // Course/term selections scope student distributions to non-withdrawn enrollments.
+  if (query.course || query.term)
+    studentFilter._id = {
+      $in: await Enrollment.distinct("student", {
+        ...enrollmentScope,
+        status: { $ne: "withdrawn" },
+      }),
+    };
+  const attendanceScope = { ...courseScope };
+  if (query.dateFrom || query.dateTo)
+    attendanceScope.date = {
+      ...(query.dateFrom ? { $gte: query.dateFrom } : {}),
+      ...(query.dateTo ? { $lte: query.dateTo } : {}),
+    };
+  const performanceScope = {
+    ...courseScope,
+    ...(query.term ? { term: query.term } : {}),
+  };
+  const nonWithdrawn = { ...enrollmentScope, status: { $ne: "withdrawn" } };
   const [
     students,
     activeStudents,
@@ -19,19 +58,22 @@ export async function reports() {
     courseEnrollments,
     recentStudents,
   ] = await Promise.all([
-    Student.countDocuments(),
-    Student.countDocuments({ status: "active" }),
-    Course.countDocuments(),
-    Enrollment.countDocuments({ status: { $ne: "withdrawn" } }),
+    Student.countDocuments(studentFilter),
+    Student.countDocuments({ ...studentFilter, status: "active" }),
+    Course.countDocuments(courseFilter),
+    Enrollment.countDocuments(nonWithdrawn),
     Student.aggregate([
+      { $match: studentFilter },
       { $group: { _id: "$department", count: { $sum: 1 } } },
       { $sort: { _id: 1 } },
     ]),
     Student.aggregate([
+      { $match: studentFilter },
       { $group: { _id: "$academicYear", count: { $sum: 1 } } },
       { $sort: { _id: 1 } },
     ]),
     Enrollment.aggregate([
+      { $match: enrollmentScope },
       {
         $group: {
           _id: { $dateToString: { format: "%Y-%m", date: "$createdAt" } },
@@ -41,6 +83,7 @@ export async function reports() {
       { $sort: { _id: 1 } },
     ]),
     Attendance.aggregate([
+      { $match: attendanceScope },
       {
         $group: {
           _id: "$course",
@@ -72,6 +115,7 @@ export async function reports() {
       },
     ]),
     Grade.aggregate([
+      { $match: performanceScope },
       {
         $group: {
           _id: "$course",
@@ -102,6 +146,7 @@ export async function reports() {
       },
     ]),
     Enrollment.aggregate([
+      { $match: enrollmentScope },
       { $match: { status: { $ne: "withdrawn" } } },
       { $group: { _id: "$course", count: { $sum: 1 } } },
       {
@@ -115,7 +160,7 @@ export async function reports() {
       { $unwind: "$course" },
       { $project: { course: "$course.name", count: 1 } },
     ]),
-    Student.find()
+    Student.find(studentFilter)
       .sort({ createdAt: -1 })
       .limit(5)
       .select("firstName lastName studentId createdAt")
@@ -123,15 +168,15 @@ export async function reports() {
   ]);
   const activityGroups = await Promise.all(
     [
-      [Student, "students", "Student record", "studentId"],
-      [Course, "courses", "Course record", "code"],
-      [Enrollment, "enrollments", "Enrollment", "term"],
-      [Attendance, "attendance", "Attendance record", "date"],
-      [Grade, "grades", "Assessment", "assessment"],
-    ].map(async ([model, module, title, field]) =>
+      [Student, "students", "Student record", "studentId", studentFilter],
+      [Course, "courses", "Course record", "code", courseFilter],
+      [Enrollment, "enrollments", "Enrollment", "term", enrollmentScope],
+      [Attendance, "attendance", "Attendance record", "date", attendanceScope],
+      [Grade, "grades", "Assessment", "assessment", performanceScope],
+    ].map(async ([model, module, title, field, filter]) =>
       (
         await model
-          .find()
+          .find(filter)
           .sort({ updatedAt: -1 })
           .limit(5)
           .select(field + " updatedAt")
@@ -173,14 +218,33 @@ export const gradeLabel = (percentage, thresholds) =>
   [...thresholds]
     .sort((a, b) => b.minimum - a.minimum)
     .find((t) => percentage >= t.minimum)?.label ?? "—";
-export function csv(rows) {
-  const keys = rows.length
-    ? Object.keys(rows[0]).filter((k) => k !== "_id")
-    : [];
+export const reportColumns = {
+  departments: ["department", "count"],
+  years: ["academicYear", "count"],
+  courseEnrollments: ["course", "count"],
+  attendance: ["course", "department", "recorded", "attended", "percentage"],
+  performance: ["course", "assessments", "marks", "maxMarks", "percentage"],
+};
+export function reportCsv(type, rows) {
+  return csv(
+    rows.map((row) =>
+      type === "departments"
+        ? { department: row._id, count: row.count }
+        : type === "years"
+          ? { academicYear: row._id, count: row.count }
+          : row,
+    ),
+    reportColumns[type],
+  );
+}
+export function csv(rows, columns) {
+  const keys =
+    columns ||
+    (rows.length ? Object.keys(rows[0]).filter((k) => k !== "_id") : []);
   const cell = (v) =>
     '"' +
     String(v ?? "")
-      .replace(/^[=+@\-\t\r]/, "'$&")
+      .replace(/^(?:\s*[=+@-]|[\t\r])/, "'$&")
       .replaceAll('"', '""') +
     '"';
   return (

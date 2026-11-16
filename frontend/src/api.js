@@ -51,12 +51,19 @@ export async function api(path, options = {}) {
   const res = await request(path, options);
   return res.status === 204 ? null : res.json();
 }
-export async function download(type) {
-  const res = await request("/reports/" + type + ".csv");
+export async function downloadFile(path, filename) {
+  const res = await request(path);
   const url = URL.createObjectURL(await res.blob());
   const a = document.createElement("a");
   a.href = url;
-  a.download = type + ".csv";
+  a.download = filename;
   a.click();
   URL.revokeObjectURL(url);
+}
+
+export async function download(type, query = "") {
+  return downloadFile(
+    "/reports/" + type + ".csv" + (query ? "?" + query : ""),
+    type + ".csv",
+  );
 }

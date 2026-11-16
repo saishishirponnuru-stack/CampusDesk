@@ -343,6 +343,12 @@ export default function Records({ kind }) {
       api("/courses?limit=100&search=" + encodeURIComponent(courseSearch)),
     enabled: ["enrollments", "attendance", "grades"].includes(kind),
   });
+  const capabilities = useQuery({
+    queryKey: ["operation-capabilities"],
+    queryFn: () => api("/operations/capabilities"),
+    staleTime: 300000,
+    enabled: ["students", "attendance"].includes(kind),
+  });
   const q = useData([kind, params.toString()], "/" + kind + "?" + params);
   const del = useMutation({
     mutationFn: (id) => api("/" + kind + "/" + id, { method: "DELETE" }),
@@ -363,16 +369,28 @@ export default function Records({ kind }) {
         title={config.title}
         description={config.description}
         action={
-          <button
-            className="primary"
-            onClick={() => {
-              setEditing({});
-              setNotice("");
-            }}
-          >
-            <Plus size={17} />
-            Add {config.singular}
-          </button>
+          <div className="page-actions">
+            {capabilities.data?.atomicBatches && kind === "students" && (
+              <Link className="secondary-action" to="/students/import">
+                Import CSV
+              </Link>
+            )}
+            {capabilities.data?.atomicBatches && kind === "attendance" && (
+              <Link className="secondary-action" to="/attendance/register">
+                Open register
+              </Link>
+            )}
+            <button
+              className="primary"
+              onClick={() => {
+                setEditing({});
+                setNotice("");
+              }}
+            >
+              <Plus size={17} />
+              Add {config.singular}
+            </button>
+          </div>
         }
       />
       {notice && <Message>{notice}</Message>}

@@ -1,7 +1,10 @@
 import { z } from "zod";
 const text = z.string().trim().min(1).max(120);
 const number = (min, max) => z.coerce.number().min(min).max(max);
-export const id = z.string().regex(/^[a-f\d]{24}$/i, "Invalid resource ID");
+export const id = z
+  .string()
+  .regex(/^[a-f\d]{24}$/i, "Invalid resource ID")
+  .transform((value) => value.toLowerCase());
 const academic = {
   department: text,
   semester: number(1, 12).int(),

@@ -74,6 +74,7 @@ export function routes(router, kind) {
       await checkUpdate(kind, current, data);
       await validateRelations(kind, data);
       Object.assign(current, data);
+      if (kind === "attendance") current.revision = (current.revision ?? 0) + 1;
       return current.save();
     });
     res.json(record);

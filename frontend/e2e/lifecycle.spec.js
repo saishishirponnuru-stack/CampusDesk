@@ -1,9 +1,11 @@
 import { test, expect } from "@playwright/test";
 import { readFile } from "node:fs/promises";
+import { capture } from "./support/real";
 test.skip(
   !process.env.E2E_ADMIN_EMAIL || !process.env.E2E_ADMIN_PASSWORD,
   "Requires the owned disposable database/API runner",
 );
+test.use({ actionTimeout: 10000 });
 test("complete academic journey persists, reports, exports and revokes access", async ({
   page,
   request,
@@ -173,10 +175,28 @@ test("complete academic journey persists, reports, exports and revokes access", 
     page.getByRole("link", { name: /Total students/ }).locator("strong"),
   ).toHaveText(String(report.metrics.students));
   await nav("Reports");
+  await page.getByLabel("Department", { exact: true }).fill(department);
+  await page.getByLabel("Academic year", { exact: true }).fill("2026-2027");
+  await page.getByLabel("Semester", { exact: true }).selectOption("1");
+  await page.getByLabel("Attendance from", { exact: true }).fill("2026-11-16");
+  await page
+    .getByLabel("Attendance through", { exact: true })
+    .fill("2026-11-16");
+  await page
+    .getByRole("button", { name: "Apply filters", exact: true })
+    .click();
+  await expect(
+    page.getByText("Filtered results", { exact: true }),
+  ).toBeVisible();
   await page.getByRole("button", { name: "Performance", exact: true }).click();
   await expect(
     page.getByRole("cell", { name: course.name, exact: true }),
   ).toBeVisible();
+  for (const theme of ["light", "dark"]) {
+    await page.getByLabel("Color theme").selectOption(theme);
+    await capture(page, test, "filtered-reports", theme);
+  }
+  await expect(page.locator(".history tbody tr")).toHaveCount(1);
   const downloading = page.waitForEvent("download");
   await page.getByRole("button", { name: "Export CSV" }).click();
   const file = await downloading;

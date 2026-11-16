@@ -61,6 +61,7 @@ const course = new Schema(
   },
   options,
 );
+course.index({ department: 1, academicYear: 1, semester: 1 });
 const enrollment = new Schema(
   {
     student: ref("Student"),
@@ -75,11 +76,13 @@ const enrollment = new Schema(
   options,
 );
 enrollment.index({ student: 1, course: 1, term: 1 }, { unique: true });
+enrollment.index({ course: 1, term: 1, status: 1, student: 1 });
 const attendance = new Schema(
   {
     student: ref("Student"),
     course: ref("Course"),
     date: { type: String, required: true },
+    revision: { type: Number, default: 0, min: 0 },
     status: {
       type: String,
       enum: ["present", "absent", "late"],
@@ -89,6 +92,7 @@ const attendance = new Schema(
   options,
 );
 attendance.index({ student: 1, course: 1, date: 1 }, { unique: true });
+attendance.index({ course: 1, date: 1, student: 1 });
 const grade = new Schema(
   {
     student: ref("Student"),
@@ -100,6 +104,7 @@ const grade = new Schema(
   },
   options,
 );
+grade.index({ course: 1, term: 1 });
 grade.pre("validate", function () {
   if (this.marks > this.maxMarks)
     this.invalidate("marks", "Marks cannot exceed maximum marks");
@@ -121,3 +126,14 @@ export const models = {
   attendance: Attendance,
   grades: Grade,
 };
+
+const receipt = new Schema({
+  actor: ref("Admin"),
+  requestId: text,
+  hash: text,
+  result: { type: Schema.Types.Mixed, required: true },
+  createdAt: { type: Date, default: Date.now },
+});
+receipt.index({ actor: 1, requestId: 1 }, { unique: true });
+receipt.index({ createdAt: 1 }, { expireAfterSeconds: 604800 });
+export const OperationReceipt = mongoose.model("OperationReceipt", receipt);

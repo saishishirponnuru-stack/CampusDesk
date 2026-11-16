@@ -2028,3 +2028,5 @@ dialog form .dialog-actions {
     grid-column: 2/4;
   }
 }
+/* Phase II: atomic academic operations, composed from Nova surfaces. */
+.page-actions { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
