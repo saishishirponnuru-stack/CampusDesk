@@ -34,3 +34,12 @@ After Vercel assigns an HTTPS production URL, put that exact origin into Render 
 Sign in, create a synthetic temporary student, edit it, reload and sign in again, confirm persistence, then remove it. Verify the browser uses the Render API, no mixed-content or CORS errors occur, direct /students navigation works, and health reports connected. Check dashboard and CSV against actual records. Check sign-out invalidates the old token and invalid passwords are rejected. Remove verification data and enable Atlas backups.
 
 Do not claim deployment success until both services and Atlas pass these checks. Hosting permissions, accounts, secrets, public URLs and Atlas network access are external prerequisites.
+
+
+## Recovery environment status
+
+The recovery cloud workspace starts successfully. No deployment or Atlas access occurred during this milestone. Codespaces Atlas connectivity was reported by the user; it has not been independently revalidated here. Backend schema/index and single-instance contracts remain unchanged.
+
+Root development supervision does not change Render's `npm start` or Vercel's frontend build command. The theme bootstrap is inline in the frontend HTML; if a frontend Content Security Policy is introduced, authorize that exact script using a hash or nonce rather than enabling arbitrary inline scripts.
+
+Cloud environment settings contain a saved draft adding `fastdl.mongodb.org` to the custom network allowlist (package-manager presets retained), plus installation and startup instructions. Review/save the settings and publish to activate the prepared environment. A saved draft alone does not change the current runtime; retry the isolated integration suite after network access is applied. Do not bypass the proxy or disable TLS/checksum verification.

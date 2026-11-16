@@ -58,3 +58,11 @@ Recovered the existing checkout from remote `campusdesk-implementation` at `ab9d
 | Public deployment, production/Atlas verification | Not performed; external hosting configuration required |
 
 Next: apply the saved official MongoDB download allowlist in environment settings, rerun isolated integration tests, start the disposable local API with synthetic credentials and run authenticated E2E. Only after that baseline is verified should relationship-heavy bulk workflows be extended. User-reported Codespaces Atlas success is preserved as reported evidence, not claimed as independently tested here.
+
+### Milestone: reproducible development supervision
+
+Root `npm run dev` and `npm run dev:local` coordinate both existing services, preserve individual service commands, stop siblings on failures and signals, and refuse silent Vite port changes. The normal root runner uses backend `npm start` so configuration failures terminate rather than leaving a failed watch process alive. Backend source changes require restarting the root runner.
+
+Root `npm ci` and the two supervisor tests passed. A live invocation without MONGODB_URI exited 1 and shut down the frontend. A successful database-backed root startup remains unverified for the same infrastructure/credential blockers above. CI now includes root supervisor checks. Documentation includes restart steps, real fixture-labeled screenshots, an architecture diagram, a case study, and the completion matrix.
+
+Cloud configuration draft save was confirmed for install_script, start_skill and the fastdl.mongodb.org allowlist addition. This neither activated network access nor published a snapshot. Review/save in environment settings and publish remain user actions. Git commits are pushed to the existing implementation branch without force; PR #1 is not merged or closed by this work.

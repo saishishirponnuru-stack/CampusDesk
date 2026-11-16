@@ -23,3 +23,14 @@ CI runs full API tests, frontend tests/build, and desktop/mobile browser tests a
 ## Evidence in this cloud instance
 
 Consult docs/PROGRESS.md for current observed outcomes. A failed beforeAll MongoDB startup means integration tests did not execute; they must not be described as passing. Public browser tests do not demonstrate authenticated academic operations. An Atlas health check and an authenticated persistence test remain required for production readiness.
+
+
+## Recovery regression commands
+
+At root, `npm run test:dev` uses controlled child-process fixtures to verify sibling cleanup, Ctrl+C/SIGTERM handling, and failure exit propagation without a database. A separate live `npm run dev` check with missing MONGODB_URI confirmed failure reporting and sibling shutdown; successful full-stack startup is not yet verified here.
+
+`npm test --prefix frontend` now covers theme selection, OS changes, persistence, invalid preferences, unsaved-edit discard confirmation, stale-session responses, expired exports and actionable network failures in addition to the existing form tests.
+
+`PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium npm run test:e2e --prefix frontend` covers light/dark workspace navigation and dialogs, global search results and course-directory navigation, filters, Escape discard cancellation, and theme reload/system behavior. Workspace tests use explicit API fixtures, not MongoDB. Layout overflow assertions include 320, 768, 1366 and 1920px widths, alongside desktop/mobile projects. Screenshots are written under frontend/test-results; committed documentation screenshots are labeled with their fixture limitations.
+
+The real-database student lifecycle tests remain skipped unless isolated E2E credentials and a running disposable API are supplied. The full cross-module authenticated browser workflow is still incomplete. Full WCAG certification and production verification are not claimed.

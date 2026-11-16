@@ -10,7 +10,7 @@ Open this repository in GitHub Codespaces. The dev container installs Node 24 an
 1. Run `npm ci --prefix backend && npm ci --prefix frontend`.
 2. Copy `backend/.env.example` to `backend/.env`. Supply a real Atlas URI and a cryptographically random JWT secret of at least 32 characters through cloud secret management. Set `ADMIN_EMAIL`, `ADMIN_PASSWORD` (12–128 characters), and `ADMIN_NAME` for initial provisioning.
 3. From `backend/`, run `npm run admin:init`. Existing administrators and passwords are preserved.
-4. From `backend/`, run `npm run dev`. From `frontend/`, run `npm run dev` in a second terminal.
+4. From the repository root, run `npm run dev` to start both services. Ctrl+C stops both; if either exits, the other stops too. The frontend refuses a busy port instead of silently switching ports. Restart the command after backend source changes; frontend hot reload remains enabled. Individual `npm run dev` commands in each service still work.
 5. Verify `/api/health` returns HTTP 200 with `database: connected`, then sign in.
 
 For Codespaces, set `CORS_ORIGINS` to the exact forwarded frontend origin if you call the backend directly. The default Vite proxy uses relative `/api` requests. Keep ports private.
@@ -40,4 +40,29 @@ Missing attendance does not count as absent. Present and late both count as atte
 - [Atlas, Render, and Vercel deployment](docs/DEPLOYMENT.md)
 - [Implementation progress and remaining blockers](docs/PROGRESS.md)
 
-The implementation is not yet certified complete: cloud MongoDB download access blocks integration execution, and Atlas/hosting credentials are absent. See the progress log for exact executed checks. No services have been deployed.
+The implementation is not yet certified complete: cloud MongoDB download access still blocks integration execution, and Atlas/hosting credentials are absent in this instance (the user previously verified Atlas in Codespaces). See the progress log for exact executed checks. No services have been deployed.
+
+
+## CampusDesk 2.0 recovery milestone
+
+Continue on `campusdesk-implementation`; PR #1 remains the review destination. No project regeneration or database migration was performed.
+
+- Light, dark, and system themes cover the existing workspace, login, forms, tables, reports, and chart styling. Selection persists in this browser; authentication stays memory-only.
+- Use the header search or Ctrl/Cmd+K to search students and courses with bounded server queries or jump to a page. Course results open a filtered directory.
+- Collapse the desktop sidebar using its arrow; icon links retain accessible names and tooltips.
+- Filter student/course directories by semester and clear filters together. Dirty academic forms require confirmation before discarding edits.
+- Expired CSV downloads now end the session consistently. Delayed unauthorized responses from an old login cannot expire a new session.
+
+![CampusDesk dark workspace](docs/screenshots/workspace-dark.png)
+
+Actual application screenshot from the browser regression run with explicitly mocked empty API responses. It demonstrates layout and theme rendering, not Atlas data or authenticated database persistence.
+
+[Engineering case study](docs/CASE_STUDY.md) · [Current feature and verification matrix](docs/PROGRESS.md)
+
+### Restart and demonstrate
+
+Configure `backend/.env` privately or inject the backend variables into the shell that launches the root command, then run `npm run dev`. Secrets exported in another terminal are not inherited. Keep forwarded ports private. Check `/api/health`, sign in, change themes, open workspace search, inspect academic modules, and export an existing report. A reload requires sign-in again by design.
+
+For isolated development only, root `npm run dev:local` runs the local MongoDB runner and frontend together. Explicit synthetic `ADMIN_EMAIL` and `ADMIN_PASSWORD` are required. Never supply production credentials or set demo seeding against Atlas. See [testing](docs/TESTING.md) for the infrastructure prerequisite.
+
+If npm's default cache is not writable, append `--cache /tmp/campusdesk-npm` to installation commands. Integrity and TLS checks stay enabled.
