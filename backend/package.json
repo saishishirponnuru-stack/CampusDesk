@@ -1,0 +1,1 @@
+{"name":"campusdesk-api","version":"1.0.0","private":true,"type":"module","engines":{"node":">=24 <25"},"scripts":{"start":"node src/server.js","dev":"node --watch src/server.js","test":"vitest run","admin:init":"node scripts/admin.js","seed":"node scripts/seed.js","dev:local":"node scripts/local.js"}}
