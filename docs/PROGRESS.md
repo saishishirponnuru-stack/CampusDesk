@@ -86,3 +86,7 @@ Extended shared mobile record cards to enrollments, attendance and grades while 
 Final stable-source checks: 17 frontend tests passed; Playwright 18 passed / 2 real-database tests skipped; 2 supervisor tests passed; frozen frontend npm ci and production build passed. Both production-dependency audits report 0 advisories. Backend unit results remain 14 passed; 23 integration tests remain blocked in MongoDB setup, so the backend full-test command still exits unsuccessfully. No Atlas access was performed.
 
 52 actual Chromium screenshots were captured in desktop/mobile light/dark modes. Major login, dashboard, directory, form, profile, roster, attendance, grades, reports, search and settings views were inspected; labels, focus, filters, mobile cards and clipped footer issues were corrected. The gallery is explicitly labeled as fixture-backed and does not claim real persistence. Targeted semantic color pairs meet 4.5:1; reduced motion/transparency are browser-tested. This is not full WCAG certification or multi-browser certification.
+
+### Nova delivery gallery
+
+Implementation commits 995c57e and 7b8b4ce are pushed. README, architecture/testing/deployment notes, case study, the 52-image gallery and NOVA_DELIVERY.md distinguish completed UI work from blocked persistence and deferred advanced workflows. A final gallery-capture rerun passed all 4 populated desktop/mobile/theme cases; modal captures use viewport bounds to avoid full-page backdrop artifacts. Documentation links and git diff --check passed. No production deployment is claimed.

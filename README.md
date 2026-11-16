@@ -1,68 +1,83 @@
-# CampusDesk
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="frontend/public/brand/logo-dark.svg">
+  <img src="frontend/public/brand/logo-light.svg" alt="CampusDesk" width="280">
+</picture>
 
-Academic administration built with React + Vite, Express, and MongoDB Atlas.
-One monorepo, two deployable services: `frontend/` (Vercel) and `backend/` (Render).
+# CampusDesk Nova
 
-## Cloud development
+A connected workspace for student records, courses, enrollment, attendance, assessments, and academic reporting. React/Vite on Vercel, one Express API on Render, MongoDB for persistent records.
 
-Open this repository in GitHub Codespaces. The dev container installs Node 24 and dependencies and forwards 5173 and 5000. No software on your laptop is required.
+![CampusDesk Nova dashboard](docs/screenshots/nova/dashboard-light.png)
 
-1. Run `npm ci --prefix backend && npm ci --prefix frontend`.
-2. Copy `backend/.env.example` to `backend/.env`. Supply a real Atlas URI and a cryptographically random JWT secret of at least 32 characters through cloud secret management. Set `ADMIN_EMAIL`, `ADMIN_PASSWORD` (12–128 characters), and `ADMIN_NAME` for initial provisioning.
-3. From `backend/`, run `npm run admin:init`. Existing administrators and passwords are preserved.
-4. From the repository root, run `npm run dev` to start both services. Ctrl+C stops both; if either exits, the other stops too. The frontend refuses a busy port instead of silently switching ports. Restart the command after backend source changes; frontend hot reload remains enabled. Individual `npm run dev` commands in each service still work.
-5. Verify `/api/health` returns HTTP 200 with `database: connected`, then sign in.
+**Screenshot disclosure:** the gallery shows the actual application rendered against fictional API-contract fixtures. These screenshots demonstrate interface behavior and visual design, not Atlas persistence. Fixtures are confined to browser tests and are never used by the application.
 
-For Codespaces, set `CORS_ORIGINS` to the exact forwarded frontend origin if you call the backend directly. The default Vite proxy uses relative `/api` requests. Keep ports private.
+## The workspace
 
-### Isolated local cloud demo
+- An original courtyard-C identity, custom SVG navigation and editorial illustrations, and self-hosted Manrope typography.
+- Light, dark, and live system appearance; selective glass navigation/search, solid record surfaces, reduced-motion and reduced-transparency support.
+- Keyboard workspace search (Ctrl/Cmd+K, arrows, Enter, Escape), a collapsible sidebar, and a focus-managed mobile drawer.
+- Database-driven dashboard metrics, weighted assessment results, accessible chart data, and contextual actions.
+- Validated student/course CRUD, searchable academic selectors, server pagination, mobile record cards, student history, and paginated course rosters.
+- Individual attendance and assessment management, grade thresholds, report selection, and authenticated CSV exports.
+- Explicit administrator provisioning, 15-minute memory-only bearer sessions, logout/password revocation, exact-origin CORS, rate-limited login, and protected academic relationships.
 
-Without Atlas, `npm run dev:local` in `backend/` starts a real MongoDB subprocess managed by mongodb-memory-server. Supply `ADMIN_EMAIL` and `ADMIN_PASSWORD` as environment variables. Set `DEMO_DATA=yes` explicitly to add fictional records. This development-only process requires access to `fastdl.mongodb.org` to download MongoDB with MD5 verification enabled. Persistent local data is stored at `LOCAL_DB_PATH` (default `/tmp/campusdesk-local-db`); this is not cloud storage or production persistence. The ephemeral signing secret invalidates sessions on restart.
+Bulk attendance, student CSV import, durable audit history, faculty roles and PWA/offline behavior are **not implemented**. Existing persistence was reported working by the user in Codespaces; independent database testing remains blocked in this cloud instance. [Delivery report and completion matrix](docs/NOVA_DELIVERY.md).
 
-### Demo data in an explicit development database
+## Run in Codespaces or a cloud workspace
 
-From `backend/`, run `CONFIRM_DEMO_SEED=yes npm run seed` with a non-production `MONGODB_URI`. This creates 36 fictional students, six courses, 72 enrollments, 360 attendance records, and 72 assessments, idempotently. Administrator initialization is separate. Normal startup never seeds demo data. Never seed a real institution's database.
+Use Node 24. This environment is already isolated; use the existing checkout.
 
-## Capabilities
+```sh
+npm ci
+npm ci --prefix backend
+npm ci --prefix frontend
+npm run dev
+```
 
-- Administrator authentication, 15-minute in-memory bearer sessions, session invalidation, password changes, login rate limiting.
-- Validated student and course CRUD, search, filters, sorting, pagination, profiles, explicit deletion confirmation.
-- Compatible academic-term enrollments, editable attendance registers, marks and configurable grade thresholds.
-- MongoDB aggregation dashboard, department/year/enrollment/attendance/performance reports, authenticated CSV exports.
-- Responsive navigation, accessible labeled forms, native modal dialogs, loading, empty, and API error states.
+Before starting, configure `backend/.env` from `.env.example`, or inject variables into the shell launching the root command. Required: `MONGODB_URI` and a cryptographically random `JWT_SECRET` of at least 32 characters. Never commit credentials or print their values. Secrets exported in another terminal are not inherited.
 
-Missing attendance does not count as absent. Present and late both count as attended. Grade percentages are marks / maximum; aggregate performance is weighted by maximum marks. No GPA is calculated.
+The root command starts Express on 5000 and Vite on 5173. Ctrl+C stops both process groups; if either service exits, its sibling stops. Vite refuses a busy port. Frontend hot reload works; restart the root command after backend changes. Individual service `npm run dev` commands remain available. Keep forwarded ports private.
 
-## Verification and deployment
+Provision administrators explicitly using `npm run admin:init --prefix backend` with securely supplied `ADMIN_EMAIL`, `ADMIN_PASSWORD` (12–128 characters) and `ADMIN_NAME`. Existing administrator passwords are preserved. Startup never seeds or provisions automatically.
 
-- [Architecture and data rules](docs/ARCHITECTURE.md)
-- [Tests and verification evidence](docs/TESTING.md)
-- [Atlas, Render, and Vercel deployment](docs/DEPLOYMENT.md)
-- [Implementation progress and remaining blockers](docs/PROGRESS.md)
+### Isolated development and tests
 
-The implementation is not yet certified complete: cloud MongoDB download access still blocks integration execution, and Atlas/hosting credentials are absent in this instance (the user previously verified Atlas in Codespaces). See the progress log for exact executed checks. No services have been deployed.
+Root `npm run dev:local` starts a disposable/local MongoDB runner and frontend. Supply **synthetic** `ADMIN_EMAIL` and `ADMIN_PASSWORD`, and an isolated `LOCAL_DB_PATH`. `DEMO_DATA=yes` explicitly enables fictional seed records in that local database. It never uses the Atlas URI. Local data directories are not cloud persistence.
 
+The official MongoDB binary download requires `fastdl.mongodb.org`. This domain is saved in the configuration draft but is still absent from the running allowlist. TLS/checksum verification must remain enabled. Do not use the primary Atlas database as a test fallback.
 
-## CampusDesk 2.0 recovery milestone
+```sh
+npm run test:dev
+npm test --prefix backend
+npm test --prefix frontend
+npm run build
+PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium npm run test:e2e --prefix frontend
+```
 
-Continue on `campusdesk-implementation`; PR #1 remains the review destination. No project regeneration or database migration was performed.
+If npm's default cache is not writable, append `--cache /tmp/campusdesk-npm` to installation commands. A browser binary may need installation on other machines. See [testing](docs/TESTING.md) for real database versus fixture test boundaries.
 
-- Light, dark, and system themes cover the existing workspace, login, forms, tables, reports, and chart styling. Selection persists in this browser; authentication stays memory-only.
-- Use the header search or Ctrl/Cmd+K to search students and courses with bounded server queries or jump to a page. Course results open a filtered directory.
-- Collapse the desktop sidebar using its arrow; icon links retain accessible names and tooltips.
-- Filter student/course directories by semester and clear filters together. Dirty academic forms require confirmation before discarding edits.
-- Expired CSV downloads now end the session consistently. Delayed unauthorized responses from an old login cannot expire a new session.
+## Architecture and data policy
 
-![CampusDesk dark workspace](docs/screenshots/workspace-dark.png)
+```mermaid
+flowchart LR
+  React[React / Vite workspace] -->|HTTPS + memory bearer token| API[Express: one instance]
+  API --> DB[(MongoDB / Atlas)]
+  React --> Appearance[Local appearance preference]
+  Tests[Isolated integration tests] --> Disposable[(Disposable MongoDB)]
+```
 
-Actual application screenshot from the browser regression run with explicitly mocked empty API responses. It demonstrates layout and theme rendering, not Atlas data or authenticated database persistence.
+Academic relationships must match department, semester, academic year and term. Database indexes prevent duplicate identifiers and academic records. Dependent history blocks parent deletion; there are no destructive cascades. Present and late count as attended; missing sessions are excluded. Weighted results use total marks / total maximum marks. No GPA is inferred.
 
-[Engineering case study](docs/CASE_STUDY.md) · [Current feature and verification matrix](docs/PROGRESS.md)
+**Run exactly one API instance.** Relationship-sensitive writes are serialized in one process; multi-instance or external concurrent writers require a transaction-aware coordination design before scaling. Refresh requires sign-in again by design; no authentication tokens enter localStorage.
 
-### Restart and demonstrate
+## Engineering notes
 
-Configure `backend/.env` privately or inject the backend variables into the shell that launches the root command, then run `npm run dev`. Secrets exported in another terminal are not inherited. Keep forwarded ports private. Check `/api/health`, sign in, change themes, open workspace search, inspect academic modules, and export an existing report. A reload requires sign-in again by design.
+- [Nova delivery report, verification, limitations and demo guide](docs/NOVA_DELIVERY.md)
+- [Screenshot gallery](docs/SCREENSHOTS.md)
+- [Architecture](docs/ARCHITECTURE.md)
+- [Testing](docs/TESTING.md)
+- [Deployment: Atlas → Render → Vercel](docs/DEPLOYMENT.md)
+- [Progress](docs/PROGRESS.md)
+- [Case study](docs/CASE_STUDY.md)
 
-For isolated development only, root `npm run dev:local` runs the local MongoDB runner and frontend together. Explicit synthetic `ADMIN_EMAIL` and `ADMIN_PASSWORD` are required. Never supply production credentials or set demo seeding against Atlas. See [testing](docs/TESTING.md) for the infrastructure prerequisite.
-
-If npm's default cache is not writable, append `--cache /tmp/campusdesk-npm` to installation commands. Integrity and TLS checks stay enabled.
+Render and Vercel configurations are preserved. No public deployment or production verification is claimed. PR #1 stays the review destination on `campusdesk-implementation`. Font attribution and OFL license are shipped in `frontend/public/licenses`; brand source is in `frontend/src/components/Brand.jsx`.

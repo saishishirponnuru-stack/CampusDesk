@@ -15,7 +15,7 @@ for (const theme of ["light", "dark"])
       await page.evaluate(() => document.fonts.ready);
       await page.screenshot({
         path: `test-results/nova-${name}-${theme}-${test.info().project.name}.png`,
-        fullPage: true,
+        fullPage: !["student-form", "search"].includes(name),
         animations: "disabled",
         scale: "css",
       });

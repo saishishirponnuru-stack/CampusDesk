@@ -43,7 +43,7 @@ Operational limitations: no audit-event collection (dashboard activity shows lat
 
 `components/Theme.jsx` owns browser appearance preferences; an early HTML bootstrap sets the resolved theme before the application loads. CSS semantic tokens style existing components and chart SVGs. System-mode subscriptions are removed on cleanup; denied localStorage access falls back to an in-session choice. This storage contains appearance only, never bearer tokens.
 
-Shared native dialogs, messages, loading and empty states live in `components/Feedback.jsx`. Dialog cancel events are prevented until the owning form approves closure, so declining discard also works with Escape. Feature pages remain largely in main.jsx; further route-level extraction is incremental future work.
+Shared native dialogs, messages, loading and empty states live in `components/Feedback.jsx`. Dialog cancel events are prevented until the owning form approves closure, so declining discard also works with Escape. Nova now extracts feature pages under features/ with lazy route boundaries; forms can be split further as workflows grow.
 
 `components/GlobalSearch.jsx` queries authenticated student/course list endpoints after a 250ms debounce with a six-record limit per category. No complete database is preloaded. Search results navigate to student profiles or a code-filtered course directory; page shortcuts use real routes.
 
@@ -61,3 +61,15 @@ flowchart LR
   Runner --> DevAPI[Development API :5000]
   Vite -->|/api proxy| DevAPI
 ```
+
+## Nova feature architecture
+
+The React bootstrap is now `frontend/src/entry.jsx`; `main.jsx` contains the authenticated shell and lazy route boundaries, with the shared QueryClient in `queryClient.js`. Login, Dashboard, Records/forms, StudentProfile, CourseProfile, Reports and Settings live under `features/`. `WorkspaceUI`, `Feedback`, `MobileRecord`, `Brand`, `Theme`, `GlobalSearch` and `LazyChart` provide shared presentation.
+
+`styles/tokens.css` owns semantic theme, elevation, typography and motion values. `styles.css` composes layouts and controls. Manrope Latin variable WOFF2 is self-hosted from the pinned Fontsource dependency; its OFL license ships with the application. No external font request, new animation engine or third-party glass/refraction implementation is used.
+
+Glass is progressive enhancement on navigation/search/quick actions only, using bounded backdrop blur and high-opacity surfaces. Unsupported browsers retain solid backgrounds. Reduced transparency removes blur; reduced motion removes nonessential animation. Charts do not animate changing academic values. Tables and long forms stay opaque.
+
+Course profiles reuse GET /courses/:id and the existing paginated enrollment list; no schema or backend endpoint changed. Mobile record cards expose the same edits/deletions as desktop tables. Student history and report selection are local presentation state over real API results. Dashboard weighted results sum marks and maximum marks, rather than averaging percentages.
+
+The browser visual fixtures live only under e2e/fixtures and are not part of the production import graph. No service worker or sensitive-record cache was introduced. The single-instance integrity contract and memory-only authentication remain unchanged.

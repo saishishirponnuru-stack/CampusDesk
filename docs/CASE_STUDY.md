@@ -14,6 +14,18 @@ A single-process write queue protects multi-record integrity decisions, alongsid
 
 Verification separates unit behavior, frontend API contracts, browser interaction and real persistence. The browser fixture screenshots show actual rendered components but cannot prove database behavior. The recovery environment passes its independent checks; the official MongoDB test binary is denied by the egress proxy, so integration execution and authenticated browser persistence remain blocked here. See PROGRESS.md for exact results rather than interpreting authored tests as executed evidence.
 
-Current measured production output is approximately 142.28 kB gzip for the main JavaScript bundle and 110.20 kB gzip for the lazy chart chunk. This is an asset-size observation, not a user latency or percentage-improvement claim. Route-level page splitting remains further work.
+The pre-Nova recovery baseline was approximately 142.28 kB gzip for the main JavaScript bundle and 110.20 kB gzip for the lazy chart chunk. This is an asset-size observation, not a user latency or percentage-improvement claim. Nova subsequently implemented feature-route splitting; final graph measurements are recorded in NOVA_DELIVERY.md.
 
 Bulk attendance, validated CSV import, a durable audit log and faculty authorization are later capabilities. They require explicit policies, database-backed tests and a coherent user experience before becoming visible controls. The current application does not advertise them as completed features.
+
+## Nova: product design and workflow refinement
+
+Nova's original mark depicts an open courtyard C connected by a record rail. The same geometric language appears in the duotone module icons and editorial illustrations. The interface uses Manrope, porcelain/midnight surfaces, iris actions and mint success states. There are no purchased theme templates or copied Apple assets.
+
+Liquid Glass is treated as a material hierarchy rather than a global effect. Navigation uses subtle translucency, search uses a more elevated layer, and quick actions receive a restrained highlight. Academic tables and forms remain opaque. Unsupported blur and user transparency/motion preferences have solid, static fallbacks. CSS handles finite interactions; an additional animation dependency was unnecessary.
+
+The redesign also changes workflow: students and courses have compact mobile cards; the same pattern extends to enrollments, attendance and marks. Course details expose a paginated roster through existing APIs. Students' academic histories use focused sections, and reports combine one chosen visualization with its exact underlying table and a working authenticated export. No invented trends or placeholder features were added.
+
+Feature-level route boundaries replace the oversized entry module. A separate bootstrap avoids re-creating the React root on hot reload. Query cancellation propagates to fetch while retaining timeouts on supporting browsers. The measured main chunk is smaller, but shared entry imports must also be counted; NOVA_DELIVERY.md records the dependency-graph measurement without claiming a production speedup.
+
+The main tradeoff remains verification infrastructure: the running cloud policy still denies the official MongoDB download even though the draft contains its allowlist entry. UI fixtures support design and request-contract testing without touching Atlas; they cannot establish persistence. Bulk attendance, imports and audit/RBAC changes remain deliberately deferred until isolated real-database tests execute.

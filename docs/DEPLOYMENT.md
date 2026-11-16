@@ -43,3 +43,7 @@ The recovery cloud workspace starts successfully. No deployment or Atlas access 
 Root development supervision does not change Render's `npm start` or Vercel's frontend build command. The theme bootstrap is inline in the frontend HTML; if a frontend Content Security Policy is introduced, authorize that exact script using a hash or nonce rather than enabling arbitrary inline scripts.
 
 Cloud environment settings contain a saved draft adding `fastdl.mongodb.org` to the custom network allowlist (package-manager presets retained), plus installation and startup instructions. Review/save the settings and publish to activate the prepared environment. A saved draft alone does not change the current runtime; retry the isolated integration suite after network access is applied. Do not bypass the proxy or disable TLS/checksum verification.
+
+## Nova delivery
+
+The frontend now includes same-origin SVG branding and a self-hosted variable font with its OFL license. Feature routes are dynamically split; the existing Vercel SPA fallback remains. Render and API environment contracts are unchanged. No service worker or offline academic cache was added. Frontend builds, contract/browser tests and the gallery are verified independently of production infrastructure; see NOVA_DELIVERY.md for exact remaining gates.
