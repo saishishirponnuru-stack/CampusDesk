@@ -1,5 +1,7 @@
 # CampusDesk engineering case study
 
+Current engineering evidence: [Phase II delivery](NOVA_PHASE_II.md). Earlier paragraphs describe historical recovery/Nova checkpoints.
+
 CampusDesk organizes the student, course, enrollment, attendance and assessment records that academic administrators otherwise reconcile across separate spreadsheets. The design goal is a useful daily workspace with explicit data rules and real aggregate reports.
 
 React and TanStack Query separate interactive UI state from cached server records. React Hook Form and Zod validate forms; the Express API validates again because clients are not a trust boundary. Mongoose provides indexed collections and the aggregation pipeline supplies reports. Vite produces a static frontend compatible with Vercel; one Express service on Render connects to Atlas.
@@ -29,3 +31,16 @@ The redesign also changes workflow: students and courses have compact mobile car
 Feature-level route boundaries replace the oversized entry module. A separate bootstrap avoids re-creating the React root on hot reload. Query cancellation propagates to fetch while retaining timeouts on supporting browsers. The measured main chunk is smaller, but shared entry imports must also be counted; NOVA_DELIVERY.md records the dependency-graph measurement without claiming a production speedup.
 
 The main tradeoff remains verification infrastructure: the running cloud policy still denies the official MongoDB download even though the draft contains its allowlist entry. UI fixtures support design and request-contract testing without touching Atlas; they cannot establish persistence. Bulk attendance, imports and audit/RBAC changes remain deliberately deferred until isolated real-database tests execute.
+
+
+## Phase II: closing the persistence gap
+
+The binary download policy remained unchanged: a saved allowlist draft had not enabled runtime access. Instead of weakening TLS/integrity checks or touching Atlas, the test runner uses the supported Docker daemon with the official MongoDB image pinned by digest. Loopback publication, tmpfs, random database names, generated synthetic credentials, process ownership and guarded teardown keep verification isolated. The original integration suite now executes; the complete UI lifecycle verifies persistence across refresh and reauthentication without changing memory-only sessions.
+
+Bulk attendance is a distinct domain operation, not a loop of browser POST requests. The API validates a bounded batch, reads eligible academic relationships and existing revisions in a snapshot, then performs one atomic bulk write. Conflicts reject all changes. Repeating an identical desired state is a no-op; missing records remain unrecorded. Legacy single-process serialization still protects parent/child checks, so transactions are not presented as distributed integrity.
+
+CSV imports separate file selection, server preview, column mapping, confirmation and commit. Every required field comes from the file; unused columns need explicit consent. Existing students are never overwritten. A content digest detects stale previews; a receipt created with the students in the same transaction makes lost-response retries safe. Fault-injection tests write inside the real transaction before failing and verify no student, attendance or receipt leaked through rollback. The parser was upgraded to the patched release after the dependency audit identified an advisory.
+
+Reports use one validated filter contract for JSON and CSV, inclusive attendance-only dates and exact academic scope. Empty exports keep headers; formula-like values are escaped even after leading whitespace. Bounded roster pages, debounced course discovery, bulk writes, additive indexes and lazy routes avoid common per-student request and frontend preload costs. No production latency, Lighthouse or load-test result is inferred from these choices.
+
+Audit history remains a deliberate deferral. Making every legacy standalone mutation and audit insertion consistently commit together requires a broader topology/transaction contract. A plausible-looking activity page without dependable events would weaken the product. Roles, PWA/offline writes and PDF remain outside this verified milestone; sensitive records are not cached by a service worker.

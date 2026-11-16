@@ -47,3 +47,14 @@ Cloud environment settings contain a saved draft adding `fastdl.mongodb.org` to 
 ## Nova delivery
 
 The frontend now includes same-origin SVG branding and a self-hosted variable font with its OFL license. Feature routes are dynamically split; the existing Vercel SPA fallback remains. Render and API environment contracts are unchanged. No service worker or offline academic cache was added. Frontend builds, contract/browser tests and the gallery are verified independently of production infrastructure; see NOVA_DELIVERY.md for exact remaining gates.
+
+
+## Phase II deployment requirements
+
+The new bulk attendance/import features require MongoDB replica-set or sharded transaction support. Atlas normally supplies this; it has **not** been contacted or independently checked by this task. A standalone MongoDB can keep individual CRUD but the capability API hides batch entry links, and batch writes fail clearly without partial success. Do not deploy an untested topology assuming atomicity.
+
+Keep exactly one API instance. Batch transactions complement the existing queue; they do not replace its cross-record relationship protection. Existing unique indexes remain; new additive query indexes, attendance revision default and the seven-day import receipt collection need index-creation privileges at startup. Startup waits for model initialization. Review these changes in isolated staging; no destructive schema migration or Atlas modification was executed here. Legacy attendance without a revision is treated as zero until updated.
+
+Use `npm run verify:isolated` with Docker for independent predeployment checks. CI uses the same pinned official image; no production credentials are needed. The original direct binary download is still blocked in this runtime, but Docker verification succeeds. No change to Render/Vercel environment names, ports, health path, CORS, SPA fallback, or startup command is required. No public deploy occurred.
+
+CSV preview and writes are authenticated, with a 64 KiB CSV / 100-row cap and 160 KiB JSON import envelope. Import receipts retain generated IDs/counts/hash for seven days, not uploaded personal data. Backups, retention policy, operational monitoring, institutional authorization and production performance testing remain deployment responsibilities.

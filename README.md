@@ -9,7 +9,7 @@ A connected workspace for student records, courses, enrollment, attendance, asse
 
 ![CampusDesk Nova dashboard](docs/screenshots/nova/dashboard-light.png)
 
-**Screenshot disclosure:** the gallery shows the actual application rendered against fictional API-contract fixtures. These screenshots demonstrate interface behavior and visual design, not Atlas persistence. Fixtures are confined to browser tests and are never used by the application.
+**Screenshot disclosure:** the dashboard above and original Nova gallery use fictional API-contract fixtures. The new Phase II gallery shows actual workflows backed by disposable local MongoDB. Neither gallery involves Atlas. Fixtures are confined to browser tests and never used by the application.
 
 ## The workspace
 
@@ -18,10 +18,12 @@ A connected workspace for student records, courses, enrollment, attendance, asse
 - Keyboard workspace search (Ctrl/Cmd+K, arrows, Enter, Escape), a collapsible sidebar, and a focus-managed mobile drawer.
 - Database-driven dashboard metrics, weighted assessment results, accessible chart data, and contextual actions.
 - Validated student/course CRUD, searchable academic selectors, server pagination, mobile record cards, student history, and paginated course rosters.
-- Individual attendance and assessment management, grade thresholds, report selection, and authenticated CSV exports.
+- Individual and atomic bulk attendance with an eligible course roster, review, conflict detection, and safe retries.
+- Validated student CSV upload, column mapping, read-only preview, atomic confirmation, and retry receipts.
+- Assessment management, grade thresholds, five filtered report categories, and authenticated spreadsheet-safe CSV exports.
 - Explicit administrator provisioning, 15-minute memory-only bearer sessions, logout/password revocation, exact-origin CORS, rate-limited login, and protected academic relationships.
 
-Bulk attendance, student CSV import, durable audit history, faculty roles and PWA/offline behavior are **not implemented**. Existing persistence was reported working by the user in Codespaces; independent database testing remains blocked in this cloud instance. [Delivery report and completion matrix](docs/NOVA_DELIVERY.md).
+Phase II verifies academic persistence against owned disposable MongoDB, including authenticated browser journeys. Atlas was never accessed. Bulk operations require a replica set; the API remains a single instance. Durable audit history, faculty roles, PWA/offline behavior, and PDF export are deferred. [Phase II delivery report](docs/NOVA_PHASE_II.md) · [original Nova design delivery](docs/NOVA_DELIVERY.md).
 
 ## Run in Codespaces or a cloud workspace
 
@@ -44,7 +46,14 @@ Provision administrators explicitly using `npm run admin:init --prefix backend` 
 
 Root `npm run dev:local` starts a disposable/local MongoDB runner and frontend. Supply **synthetic** `ADMIN_EMAIL` and `ADMIN_PASSWORD`, and an isolated `LOCAL_DB_PATH`. `DEMO_DATA=yes` explicitly enables fictional seed records in that local database. It never uses the Atlas URI. Local data directories are not cloud persistence.
 
-The official MongoDB binary download requires `fastdl.mongodb.org`. This domain is saved in the configuration draft but is still absent from the running allowlist. TLS/checksum verification must remain enabled. Do not use the primary Atlas database as a test fallback.
+The original memory-server download remains denied by this cloud proxy. The verified alternative uses an official, digest-pinned MongoDB Docker container, loopback-only port and disposable storage. It never reads `MONGODB_URI` and cleans up only its own generated test databases/container. TLS and integrity verification remain enabled.
+
+```sh
+# Docker daemon + Node 24 + installed Chromium required
+PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium npm run verify:isolated
+```
+
+This command runs backend, frontend, supervisor, build, and desktop/mobile browser checks with generated synthetic credentials. See the [isolated interactive demo](docs/NOVA_PHASE_II.md#isolated-interactive-demonstration) for hands-on use without Atlas.
 
 ```sh
 npm run test:dev
@@ -72,7 +81,8 @@ Academic relationships must match department, semester, academic year and term. 
 
 ## Engineering notes
 
-- [Nova delivery report, verification, limitations and demo guide](docs/NOVA_DELIVERY.md)
+- [Phase II functional delivery, verification, API policies and demo guide](docs/NOVA_PHASE_II.md)
+- [Original Nova design delivery](docs/NOVA_DELIVERY.md)
 - [Screenshot gallery](docs/SCREENSHOTS.md)
 - [Architecture](docs/ARCHITECTURE.md)
 - [Testing](docs/TESTING.md)

@@ -34,7 +34,7 @@ List endpoints use database pagination (default 20, maximum 100), whitelisted so
 - GET /api/reports
 - GET /api/reports/{departments,years,courseEnrollments,attendance,performance}.csv
 
-PUT replaces all validated editable fields. Invalid input returns 422, conflicts 409, absent resources 404, authentication failures 401. Invalid query values can return 400. JSON body limit is 100 KB. Unknown fields are rejected. No public admin registration exists. CORS accepts only exact configured origins. Helmet provides security headers. Authorization headers, request bodies and credential values are excluded from request logs.
+PUT replaces all validated editable fields. Invalid input returns 422, conflicts 409, absent resources 404, authentication failures 401. Invalid query values can return 400. JSON body limit is 100 KB (160 KB for the bounded CSV import envelope). Unknown fields are rejected. No public admin registration exists. CORS accepts only exact configured origins. Helmet provides security headers. Authorization headers, request bodies and credential values are excluded from request logs.
 
 Operational limitations: no audit-event collection (dashboard activity shows latest updates to actual records, not an immutable historical audit log); no multi-institution tenancy; no timezone inference for attendance dates (explicit YYYY-MM-DD); no refresh-token session recovery; no automated production database migrations or backups. Use Atlas backups and operational monitoring before institutional use.
 
@@ -73,3 +73,31 @@ Glass is progressive enhancement on navigation/search/quick actions only, using 
 Course profiles reuse GET /courses/:id and the existing paginated enrollment list; no schema or backend endpoint changed. Mobile record cards expose the same edits/deletions as desktop tables. Student history and report selection are local presentation state over real API results. Dashboard weighted results sum marks and maximum marks, rather than averaging percentages.
 
 The browser visual fixtures live only under e2e/fixtures and are not part of the production import graph. No service worker or sensitive-record cache was introduced. The single-instance integrity contract and memory-only authentication remain unchanged.
+
+
+## Phase II: transactional academic workflows
+
+Nova's identity, memory-only sessions and original CRUD contracts remain. `features/AttendanceRegister.jsx` and `StudentImport.jsx` are lazy routes; capability discovery only exposes their entry links when MongoDB reports replica-set/sharded transaction support. Unsupported writes return a clear 503 rather than a non-atomic fallback. Original individual CRUD remains available.
+
+All relationship-sensitive writes use the existing process queue. `services/transactions.js` additionally wraps batch writes in a snapshot/majority MongoDB transaction. Queries within transactions run sequentially, with one attendance `bulkWrite` or bounded student `insertMany`. This does **not** remove the single-instance contract or make external writers safe.
+
+Attendance adds a nonnegative `revision` (legacy missing revisions are read as zero). Register reads are paginated, use one roster aggregation plus one page attendance lookup, and verify academic compatibility. Bulk submissions require each row's expected revision (null for a new record), reject all rows on conflict/ineligibility, and increment revisions on changes. Individual PUT also increments revision. An identical desired status is an explicit no-op, including stale retries, and never changes timestamps. Missing rows are not absences.
+
+Student imports parse bounded UTF-8 CSV with `csv-parse`, map actual schema fields, require explicit ignored columns, validate every row and internal/existing unique conflicts, and provide a read-only preview digest. Confirmation rechecks everything in a transaction and creates new students only. `OperationReceipt` records actor, UUID request ID, SHA-256 digest, generated IDs/count and creation date in that same transaction. Unique actor/request ID plus a seven-day TTL supports retry without storing CSV bodies. Identical replay returns the original result; different content under the same key conflicts. After receipt expiry, unique student indexes still reject duplicates. An all-invalid or partially invalid import writes nothing.
+
+New additive indexes: course department/year/semester; enrollment course/term/status/student; attendance course/date/student; grade course/term; receipt actor/request ID unique and createdAt TTL. All preexisting unique and relationship indexes are retained. `model.init()` creates indexes at startup; there is no `syncIndexes`, drop, production migration, or Atlas access in this task.
+
+### Additional authenticated routes
+
+| Method | Path | Contract |
+| --- | --- | --- |
+| GET | /api/operations/capabilities | Actual transaction support and batch limits |
+| GET | /api/attendance/register | Course/date, page (default 1), limit (default 25, max 100) |
+| POST | /api/attendance/bulk | Course/date, 1–100 unique student/status/expectedRevision rows |
+| GET | /api/students/import/template.csv | Headers only; no fabricated defaults |
+| POST | /api/students/import/preview | CSV, optional mapping and explicit ignored columns; no writes |
+| POST | /api/students/import | Same content plus confirm=true, previewDigest and UUID requestId |
+
+Report JSON/CSV accept the same strict optional department, academicYear, semester, course, term, dateFrom and dateTo filters. Academic fields match exactly; course or term restricts student distributions to non-withdrawn enrollments. Term matches enrollment/assessment term and course year. Dates are inclusive and apply only to recorded attendance; missing sessions stay excluded. Five explicit CSV schemas include headers even for empty reports and escape formula prefixes (including leading whitespace), quotes, delimiters and Unicode. Unknown export types are rejected before aggregation.
+
+The dashboard's recent updates remain a projection of record updatedAt values, **not** a durable audit trail. Dependable audit across legacy standalone CRUD is deferred rather than introducing success events that could outlive failed writes.

@@ -1,5 +1,7 @@
 # CampusDesk Nova — delivery and verification
 
+> Historical Nova visual milestone. **Current functional status, executed database evidence, and demonstration: [Nova Phase II](NOVA_PHASE_II.md).** Phase II resolves the database verification gap and implements bulk attendance, CSV imports, and filtered reports described below as deferred.
+
 ## A. Outcome
 
 This milestone transforms the existing CampusDesk frontend into the Nova visual identity and academic workspace. It preserves the Express/MongoDB architecture, existing business policies, deployment configuration and administrator safeguards. It is **not a claim that every CampusDesk 3.0 acceptance gate is complete**: real isolated database execution and several advanced workflows remain outstanding.
