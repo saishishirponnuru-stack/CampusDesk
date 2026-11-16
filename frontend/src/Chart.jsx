@@ -22,31 +22,73 @@ export default function Chart({ title, description, data, line = false }) {
         <ChartNoAxesCombined size={18} />
       </div>
       {data?.length ? (
-        <div style={{ width: "100%", height: 220 }}>
+        <div
+          role="group"
+          aria-label={
+            title +
+            ": " +
+            data.map((item) => item._id + ": " + item.count).join(", ")
+          }
+          style={{ width: "100%", height: 220 }}
+        >
           <ResponsiveContainer>
             <>
               {line ? (
                 <LineChart data={data}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                  <XAxis dataKey="_id" tick={{ fontSize: 11 }} />
-                  <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
-                  <Tooltip />
+                  <CartesianGrid
+                    stroke="var(--border)"
+                    strokeDasharray="3 3"
+                    vertical={false}
+                  />
+                  <XAxis
+                    dataKey="_id"
+                    tick={{ fill: "var(--muted)", fontSize: 11 }}
+                  />
+                  <YAxis
+                    allowDecimals={false}
+                    tick={{ fill: "var(--muted)", fontSize: 11 }}
+                  />
+                  <Tooltip
+                    contentStyle={{
+                      background: "var(--surface)",
+                      borderColor: "var(--border)",
+                      color: "var(--text)",
+                    }}
+                    cursor={{ fill: "var(--accent-soft)" }}
+                  />
                   <Line
                     type="monotone"
                     dataKey="count"
-                    stroke="#4f46e5"
+                    stroke="var(--accent)"
                     strokeWidth={3}
                   />
                 </LineChart>
               ) : (
                 <BarChart data={data}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                  <XAxis dataKey="_id" tick={{ fontSize: 10 }} />
-                  <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
-                  <Tooltip />
+                  <CartesianGrid
+                    stroke="var(--border)"
+                    strokeDasharray="3 3"
+                    vertical={false}
+                  />
+                  <XAxis
+                    dataKey="_id"
+                    tick={{ fill: "var(--muted)", fontSize: 10 }}
+                  />
+                  <YAxis
+                    allowDecimals={false}
+                    tick={{ fill: "var(--muted)", fontSize: 11 }}
+                  />
+                  <Tooltip
+                    contentStyle={{
+                      background: "var(--surface)",
+                      borderColor: "var(--border)",
+                      color: "var(--text)",
+                    }}
+                    cursor={{ fill: "var(--accent-soft)" }}
+                  />
                   <Bar
                     dataKey="count"
-                    fill="#6366f1"
+                    fill="var(--accent)"
                     radius={[5, 5, 0, 0]}
                     maxBarSize={44}
                   />

@@ -3,33 +3,53 @@ let token = "";
 export function setToken(value) {
   token = value;
 }
-export async function api(path, options = {}) {
-  const res = await fetch(base + "/api" + path, {
-    ...options,
-    headers: {
-      ...(options.body ? { "Content-Type": "application/json" } : {}),
-      ...(token ? { Authorization: "Bearer " + token } : {}),
-      ...options.headers,
-    },
-  });
-  if (!res.ok) {
-    const body = await res
-      .json()
-      .catch(() => ({ message: "Unable to reach the service" }));
-    if (res.status === 401 && path !== "/auth/login")
-      window.dispatchEvent(new Event("session-expired"));
-    throw new Error(body.message || "Request failed");
+
+async function request(path, options = {}) {
+  const session = token;
+  let res;
+  try {
+    res = await fetch(base + "/api" + path, {
+      ...options,
+      signal: options.signal || AbortSignal.timeout(30000),
+      headers: {
+        ...(options.body ? { "Content-Type": "application/json" } : {}),
+        ...(session ? { Authorization: "Bearer " + session } : {}),
+        ...options.headers,
+      },
+    });
+  } catch (error) {
+    if (error.name === "AbortError") throw error;
+    throw new Error(
+      "The service is taking longer than expected or could not be reached. Please try again; it may be starting up.",
+    );
   }
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    // An old request must never expire a newer login. Tokens remain memory-only.
+    if (
+      res.status === 401 &&
+      path !== "/auth/login" &&
+      session &&
+      session === token
+    ) {
+      token = "";
+      window.dispatchEvent(new Event("session-expired"));
+    }
+    throw new Error(
+      body.message ||
+        (res.status >= 500
+          ? "Service temporarily unavailable. Please try again shortly."
+          : "Request failed"),
+    );
+  }
+  return res;
+}
+export async function api(path, options = {}) {
+  const res = await request(path, options);
   return res.status === 204 ? null : res.json();
 }
 export async function download(type) {
-  const res = await fetch(base + "/api/reports/" + type + ".csv", {
-    headers: { Authorization: "Bearer " + token },
-  });
-  if (!res.ok)
-    throw new Error(
-      "Unable to download report. Please sign in again if your session expired.",
-    );
+  const res = await request("/reports/" + type + ".csv");
   const url = URL.createObjectURL(await res.blob());
   const a = document.createElement("a");
   a.href = url;

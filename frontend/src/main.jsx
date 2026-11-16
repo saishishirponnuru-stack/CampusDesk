@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, lazy, Suspense } from "react";
+import React, { useState, useEffect, lazy, Suspense } from "react";
 import { createRoot } from "react-dom/client";
 import {
   BrowserRouter,
@@ -36,13 +36,11 @@ import {
   ChevronLeft,
   ChevronRight,
   Menu,
-  X,
   Pencil,
   Trash2,
   ArrowUpRight,
   Download,
   Check,
-  AlertCircle,
 } from "lucide-react";
 const LazyChart = lazy(() => import("./Chart"));
 const Chart = (props) => (
@@ -53,6 +51,10 @@ const Chart = (props) => (
 import { api, setToken, download } from "./api";
 import { modules, label } from "./config";
 import "./styles.css";
+import { Message, Loading, Empty, Modal } from "./components/Feedback";
+export { Modal } from "./components/Feedback";
+import { GlobalSearch } from "./components/GlobalSearch";
+import { ThemeProvider, ThemeSelector } from "./components/Theme";
 const client = new QueryClient({
   defaultOptions: {
     queries: { retry: 1, staleTime: 15000, refetchOnWindowFocus: false },
@@ -70,66 +72,6 @@ const icons = {
 };
 const useData = (key, path) =>
   useQuery({ queryKey: key, queryFn: () => api(path) });
-function Message({ error, children }) {
-  return (
-    <div
-      role={error ? "alert" : "status"}
-      className={error ? "message error" : "message"}
-    >
-      {error ? <AlertCircle size={17} /> : null}
-      {children}
-    </div>
-  );
-}
-function Loading() {
-  return (
-    <div className="loading" role="status">
-      <span className="spinner" />
-      Loading records…
-    </div>
-  );
-}
-function Empty({
-  text = "No records yet. Add your first record to get started.",
-}) {
-  return (
-    <div className="empty">
-      <ClipboardList size={30} />
-      <h3>Nothing here yet</h3>
-      <p>{text}</p>
-    </div>
-  );
-}
-export function Modal({ title, children, onClose }) {
-  const dialog = useRef(null);
-  useEffect(() => {
-    const d = dialog.current;
-    d.showModal();
-    return () => d.close();
-  }, []);
-  return (
-    <dialog
-      ref={dialog}
-      onCancel={onClose}
-      onClick={(e) => {
-        if (e.target === dialog.current) onClose();
-      }}
-      aria-labelledby="dialog-title"
-    >
-      <div className="dialog-head">
-        <h2 id="dialog-title">{title}</h2>
-        <button
-          className="icon-button"
-          aria-label="Close dialog"
-          onClick={onClose}
-        >
-          <X size={20} />
-        </button>
-      </div>
-      {children}
-    </dialog>
-  );
-}
 export function Login({ onLogin }) {
   const {
     register,
@@ -173,6 +115,9 @@ export function Login({ onLogin }) {
         <small>Built for the people behind student success.</small>
       </section>
       <section className="login-form">
+        <div className="login-appearance">
+          <ThemeSelector />
+        </div>
         <form onSubmit={handleSubmit((v) => mutation.mutate(v))}>
           <span className="eyebrow">ADMINISTRATOR ACCESS</span>
           <h1>Welcome back</h1>
@@ -214,8 +159,17 @@ export function Login({ onLogin }) {
   );
 }
 export function App() {
+  return (
+    <ThemeProvider>
+      <Workspace />
+    </ThemeProvider>
+  );
+}
+function Workspace() {
   const [signedIn, login] = useState(false),
     [mobile, setMobile] = useState(false);
+  const [collapsed, setCollapsed] = useState(false);
+  const [sessionNotice, setSessionNotice] = useState("");
   const location = useLocation();
   const me = useQuery({
     queryKey: ["me"],
@@ -228,25 +182,53 @@ export function App() {
     client.clear();
   };
   useEffect(() => {
-    const end = () => logout();
+    const end = () => {
+      setSessionNotice(
+        "Your session has expired. Please sign in again to continue.",
+      );
+      logout();
+    };
     window.addEventListener("session-expired", end);
     return () => window.removeEventListener("session-expired", end);
   }, []);
   useEffect(() => {
     setMobile(false);
   }, [location.pathname]);
-  if (!signedIn) return <Login onLogin={login} />;
+  if (!signedIn)
+    return (
+      <>
+        {sessionNotice && (
+          <div className="session-notice" role="status">
+            {sessionNotice}
+          </div>
+        )}
+        <Login
+          onLogin={(value) => {
+            setSessionNotice("");
+            login(value);
+          }}
+        />
+      </>
+    );
   const current = location.pathname.split("/")[1] || "dashboard";
   return (
-    <div className="app">
+    <div className={collapsed ? "app collapsed" : "app"}>
       <a className="skip" href="#main">
         Skip to content
       </a>
       <aside className={mobile ? "sidebar open" : "sidebar"}>
         <Link className="brand" to="/">
           <GraduationCap size={27} />
-          CampusDesk
+          <span className="brand-text">CampusDesk</span>
         </Link>
+        <button
+          className="collapse-toggle icon-button"
+          aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+          aria-expanded={!collapsed}
+          onClick={() => setCollapsed(!collapsed)}
+        >
+          {collapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
+        </button>
         <div className="workspace">
           <span className="workspace-icon">CD</span>
           <div>
@@ -260,9 +242,11 @@ export function App() {
               key={key}
               to={key === "dashboard" ? "/" : "/" + key}
               end={key === "dashboard"}
+              title={label(key)}
+              aria-label={label(key)}
             >
               <Icon size={19} />
-              {label(key)}
+              <span className="nav-text">{label(key)}</span>
             </NavLink>
           ))}
         </nav>
@@ -308,6 +292,8 @@ export function App() {
             <strong>{label(current)}</strong>
           </span>
           <div className="topbar-right">
+            <GlobalSearch />
+            <ThemeSelector />
             <span className="term">
               <span className="dot" />
               Academic administration
@@ -387,7 +373,7 @@ function Dashboard() {
                 "Active students",
                 q.data.metrics.activeStudents,
                 GraduationCap,
-                "Currently enrolled students",
+                "Student records with active status",
               ],
               [
                 "Courses",
@@ -509,14 +495,36 @@ function Dashboard() {
             </section>
           </div>
           <section className="panel">
-            <div className="panel-head"><div><h2>Recent academic activity</h2><p>Most recently updated records across your workspace</p></div></div>
-            {q.data.recentActivity?.length ? q.data.recentActivity.map(activity=>
-              <Link key={activity.module+activity.id} className="recent" to={activity.module==="students"?"/students/"+activity.id:"/"+activity.module}>
-                <span className="student-avatar"><ClipboardList size={16}/></span>
-                <div><strong>{activity.title}</strong><small>{activity.detail}</small></div>
-                <time>{new Date(activity.updatedAt).toLocaleString()}</time>
-              </Link>
-            ) : <Empty text="Academic activity will appear as records are created and updated."/>}
+            <div className="panel-head">
+              <div>
+                <h2>Recent academic activity</h2>
+                <p>Most recently updated records across your workspace</p>
+              </div>
+            </div>
+            {q.data.recentActivity?.length ? (
+              q.data.recentActivity.map((activity) => (
+                <Link
+                  key={activity.module + activity.id}
+                  className="recent"
+                  to={
+                    activity.module === "students"
+                      ? "/students/" + activity.id
+                      : "/" + activity.module
+                  }
+                >
+                  <span className="student-avatar">
+                    <ClipboardList size={16} />
+                  </span>
+                  <div>
+                    <strong>{activity.title}</strong>
+                    <small>{activity.detail}</small>
+                  </div>
+                  <time>{new Date(activity.updatedAt).toLocaleString()}</time>
+                </Link>
+              ))
+            ) : (
+              <Empty text="Academic activity will appear as records are created and updated." />
+            )}
           </section>
         </>
       )}
@@ -585,7 +593,7 @@ export function RecordForm({ kind, record, onClose }) {
   const {
     register,
     handleSubmit,
-    formState: { errors },
+    formState: { errors, isDirty },
   } = useForm({ defaultValues: defaults, resolver: zodResolver(schema) });
   const mutation = useMutation({
     mutationFn: (values) =>
@@ -598,10 +606,23 @@ export function RecordForm({ kind, record, onClose }) {
       onClose("Record saved successfully.");
     },
   });
+  const close = () => {
+    if (mutation.isPending) return;
+    if (!isDirty || window.confirm("Discard your unsaved changes?")) onClose();
+  };
+  useEffect(() => {
+    if (!isDirty) return;
+    const warn = (event) => {
+      event.preventDefault();
+      event.returnValue = "";
+    };
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [isDirty]);
   return (
     <Modal
       title={(record ? "Edit " : "Add ") + config.singular}
-      onClose={() => onClose()}
+      onClose={close}
     >
       <form onSubmit={handleSubmit((v) => mutation.mutate(v))}>
         <div className="form-grid">
@@ -686,7 +707,7 @@ export function RecordForm({ kind, record, onClose }) {
         )}
         {mutation.error && <Message error>{mutation.error.message}</Message>}
         <div className="dialog-actions">
-          <button type="button" onClick={() => onClose()}>
+          <button type="button" onClick={close}>
             Cancel
           </button>
           <button className="primary" disabled={mutation.isPending}>
@@ -711,9 +732,12 @@ const display = (row, key) => {
   return String(row[key] ?? "—");
 };
 function Records({ kind }) {
+  const location = useLocation();
   const config = modules[kind],
     qc = useQueryClient(),
-    [search, setSearch] = useState(""),
+    [search, setSearch] = useState(
+      () => new URLSearchParams(location.search).get("search") || "",
+    ),
     [filters, setFilters] = useState({}),
     [page, setPage] = useState(1),
     [sort, setSort] = useState(
@@ -727,7 +751,11 @@ function Records({ kind }) {
     [editing, setEditing] = useState(null),
     [deleting, setDeleting] = useState(null),
     [notice, setNotice] = useState("");
-  const [debounced, setDebounced] = useState("");
+  const [debounced, setDebounced] = useState(search);
+  useEffect(() => {
+    setSearch(new URLSearchParams(location.search).get("search") || "");
+    setPage(1);
+  }, [location.search]);
   useEffect(() => {
     const t = setTimeout(() => setDebounced(search), 250);
     return () => clearTimeout(t);
@@ -816,6 +844,20 @@ function Records({ kind }) {
               />
             </>
           )}
+          {["students", "courses"].includes(kind) && (
+            <select
+              aria-label="Filter by semester"
+              value={filters.semester || ""}
+              onChange={(e) => change("semester", e.target.value)}
+            >
+              <option value="">All semesters</option>
+              {Array.from({ length: 12 }, (_, i) => (
+                <option key={i + 1} value={i + 1}>
+                  Semester {i + 1}
+                </option>
+              ))}
+            </select>
+          )}
           {kind === "students" && (
             <select
               aria-label="Filter by status"
@@ -865,6 +907,19 @@ function Records({ kind }) {
               value={filters.date || ""}
               onChange={(e) => change("date", e.target.value)}
             />
+          )}
+          {(search || Object.values(filters).some(Boolean)) && (
+            <button
+              onClick={() => {
+                setSearch("");
+                setDebounced("");
+                setFilters({});
+                setCourseSearch("");
+                setPage(1);
+              }}
+            >
+              Clear filters
+            </button>
           )}
           <select
             aria-label="Sort records"
@@ -1252,6 +1307,13 @@ function SettingsPage({ me, logout }) {
         description="Your account, academic preferences, and workspace information."
       />
       {me.error && <Message error>{me.error.message}</Message>}
+      <section className="panel setting appearance-setting">
+        <div>
+          <h2>Appearance</h2>
+          <p>Choose a theme, or follow your device. Saved in this browser.</p>
+        </div>
+        <ThemeSelector />
+      </section>
       <div className="settings-grid">
         <section className="panel setting">
           <h2>Administrator profile</h2>

@@ -96,13 +96,11 @@ describe("Academic forms", () => {
     dialogSupport();
     vi.stubGlobal(
       "fetch",
-      vi
-        .fn()
-        .mockResolvedValue({
-          ok: true,
-          status: 200,
-          json: async () => ({ items: [] }),
-        }),
+      vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => ({ items: [] }),
+      }),
     );
     const { RecordForm } = await import("../src/main");
     render(
@@ -128,13 +126,11 @@ describe("Academic forms", () => {
   });
   it("rejects marks above maximum before sending a write", async () => {
     dialogSupport();
-    const fetcher = vi
-      .fn()
-      .mockResolvedValue({
-        ok: true,
-        status: 200,
-        json: async () => ({ items: [] }),
-      });
+    const fetcher = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ items: [] }),
+    });
     vi.stubGlobal("fetch", fetcher);
     const { RecordForm } = await import("../src/main"),
       user = userEvent.setup();
@@ -202,4 +198,26 @@ describe("Academic forms", () => {
     expect(options.method).toBe("PUT");
     expect(JSON.parse(options.body).firstName).toBe("Updated");
   });
+});
+
+it("keeps unsaved academic edits unless discard is confirmed", async () => {
+  HTMLDialogElement.prototype.showModal = function () {
+    this.setAttribute("open", "");
+  };
+  HTMLDialogElement.prototype.close = function () {
+    this.removeAttribute("open");
+  };
+  const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
+  const { RecordForm } = await import("../src/main");
+  const close = vi.fn(),
+    user = userEvent.setup();
+  render(<RecordForm kind="students" onClose={close} />, { wrapper });
+  await user.type(screen.getByLabelText("First name"), "Taylor");
+  await user.click(screen.getByRole("button", { name: "Close dialog" }));
+  expect(confirm).toHaveBeenCalled();
+  expect(close).not.toHaveBeenCalled();
+  confirm.mockReturnValue(true);
+  await user.click(screen.getByRole("button", { name: "Close dialog" }));
+  expect(close).toHaveBeenCalledTimes(1);
+  confirm.mockRestore();
 });

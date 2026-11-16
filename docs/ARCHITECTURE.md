@@ -37,3 +37,27 @@ List endpoints use database pagination (default 20, maximum 100), whitelisted so
 PUT replaces all validated editable fields. Invalid input returns 422, conflicts 409, absent resources 404, authentication failures 401. Invalid query values can return 400. JSON body limit is 100 KB. Unknown fields are rejected. No public admin registration exists. CORS accepts only exact configured origins. Helmet provides security headers. Authorization headers, request bodies and credential values are excluded from request logs.
 
 Operational limitations: no audit-event collection (dashboard activity shows latest updates to actual records, not an immutable historical audit log); no multi-institution tenancy; no timezone inference for attendance dates (explicit YYYY-MM-DD); no refresh-token session recovery; no automated production database migrations or backups. Use Atlas backups and operational monitoring before institutional use.
+
+
+## Workspace presentation and development supervision
+
+`components/Theme.jsx` owns browser appearance preferences; an early HTML bootstrap sets the resolved theme before the application loads. CSS semantic tokens style existing components and chart SVGs. System-mode subscriptions are removed on cleanup; denied localStorage access falls back to an in-session choice. This storage contains appearance only, never bearer tokens.
+
+Shared native dialogs, messages, loading and empty states live in `components/Feedback.jsx`. Dialog cancel events are prevented until the owning form approves closure, so declining discard also works with Escape. Feature pages remain largely in main.jsx; further route-level extraction is incremental future work.
+
+`components/GlobalSearch.jsx` queries authenticated student/course list endpoints after a 250ms debounce with a six-record limit per category. No complete database is preloaded. Search results navigate to student profiles or a code-filtered course directory; page shortcuts use real routes.
+
+The API client bounds requests to 30 seconds and handles authentication failures for JSON and CSV consistently. It compares a request's captured token to the current in-memory token before expiring a session, protecting subsequent logins from stale responses.
+
+Root `scripts/dev.js` starts service process groups, propagates failures, and terminates siblings/descendants on shutdown. It starts the backend without watch mode to detect startup failures reliably; individual backend watch mode is preserved. It never provisions administrators or seeds Atlas.
+
+```mermaid
+flowchart LR
+  Browser[React workspace] -->|Memory bearer token / HTTPS| API[Express: one instance]
+  Browser --> Theme[Browser appearance preference]
+  API --> Atlas[(MongoDB Atlas)]
+  Tests[Isolated integration tests] --> Disposable[(Disposable MongoDB)]
+  Runner[Root development supervisor] --> Vite[Vite :5173]
+  Runner --> DevAPI[Development API :5000]
+  Vite -->|/api proxy| DevAPI
+```
