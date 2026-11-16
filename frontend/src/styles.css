@@ -1998,3 +1998,33 @@ select[aria-invalid="true"] {
   gap: 20px;
   min-width: 0;
 }
+/* Actions stay in reach while the long academic form scrolls underneath. */
+dialog form .dialog-actions {
+  position: sticky;
+  bottom: 0;
+  z-index: 1;
+  margin: 24px -24px -24px;
+  padding: 16px 24px;
+  border-top: 1px solid var(--border);
+  background: var(--surface);
+}
+.badge {
+  white-space: nowrap;
+}
+@media (max-width: 640px) {
+  dialog form .dialog-actions {
+    bottom: 0;
+    margin: 24px -20px -20px;
+    padding: 16px 20px calc(16px + env(safe-area-inset-bottom));
+  }
+  .report-tabs {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .report-tabs button {
+    padding: 10px 6px;
+  }
+  .report-tabs button:last-child:nth-child(5) {
+    grid-column: 2/4;
+  }
+}

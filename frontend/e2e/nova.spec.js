@@ -21,7 +21,7 @@ for (const theme of ["light", "dark"])
       });
     };
     const navigate = async (name) => {
-      if (test.info().project.name === "mobile")
+      if (page.viewportSize().width <= 640)
         await page.getByRole("button", { name: "Open navigation" }).click();
       await page
         .getByRole("navigation", { name: "Main navigation" })
@@ -46,6 +46,9 @@ for (const theme of ["light", "dark"])
       .getByRole("button", { name: "Add student", exact: true })
       .click();
     await expect(page.getByRole("dialog")).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "Save record" }),
+    ).toBeInViewport({ ratio: 1 });
     await capture("student-form");
     await page.keyboard.press("Escape");
     await page.getByRole("link", { name: "Avery Morgan", exact: true }).click();
@@ -135,6 +138,14 @@ for (const theme of ["light", "dark"])
       await expect
         .poll(() => page.evaluate(() => document.documentElement.scrollWidth))
         .toBe(width);
+    }
+    await page.setViewportSize({ width: 320, height: 900 });
+    for (const name of ["Students", "Courses", "Attendance", "Grades"]) {
+      await navigate(name);
+      await expect(page.locator(".mobile-record").first()).toBeVisible();
+      await expect
+        .poll(() => page.evaluate(() => document.documentElement.scrollWidth))
+        .toBe(320);
     }
     expect(errors).toEqual([]);
   });

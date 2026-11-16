@@ -17,7 +17,7 @@ import { api } from "../api";
 import { modules, label } from "../config";
 import { Message, Loading, Empty, Modal } from "../components/Feedback";
 import { Heading, display, useData } from "../components/WorkspaceUI";
-import { AcademicIcon } from "../components/Brand";
+import { MobileRecord } from "../components/MobileRecord";
 export function RecordForm({ kind, record, onClose }) {
   const formId = useId();
   const config = modules[kind],
@@ -545,14 +545,7 @@ export default function Records({ kind }) {
           </div>
         ) : q.data.items.length ? (
           <>
-            <div
-              className={
-                "table-scroll directory-table " +
-                (["students", "courses"].includes(kind)
-                  ? "responsive-directory"
-                  : "")
-              }
-            >
+            <div className="table-scroll directory-table responsive-directory">
               <table>
                 <thead>
                   <tr>
@@ -626,85 +619,23 @@ export default function Records({ kind }) {
                 </tbody>
               </table>
             </div>
-            {["students", "courses"].includes(kind) && (
-              <div className="mobile-records">
-                {q.data.items.map((row) => (
-                  <article className="mobile-record" key={row._id}>
-                    <div className="mobile-record-identity">
-                      <span className="student-avatar" aria-hidden="true">
-                        {kind === "students" ? (
-                          row.firstName[0] + row.lastName[0]
-                        ) : (
-                          <AcademicIcon kind="courses" size={20} />
-                        )}
-                      </span>
-                      <div>
-                        <Link to={"/" + kind + "/" + row._id}>
-                          <strong>
-                            {kind === "students"
-                              ? row.firstName + " " + row.lastName
-                              : row.name}
-                          </strong>
-                        </Link>
-                        <small>
-                          {kind === "students" ? row.studentId : row.code}
-                        </small>
-                      </div>
-                      {row.status && (
-                        <span className={"badge " + row.status}>
-                          {label(row.status)}
-                        </span>
-                      )}
-                    </div>
-                    <dl>
-                      <div>
-                        <dt>Department</dt>
-                        <dd>{row.department}</dd>
-                      </div>
-                      <div>
-                        <dt>Academic year</dt>
-                        <dd>{row.academicYear}</dd>
-                      </div>
-                      <div>
-                        <dt>Semester</dt>
-                        <dd>{row.semester}</dd>
-                      </div>
-                      {kind === "courses" && (
-                        <div>
-                          <dt>Faculty</dt>
-                          <dd>{row.facultyName}</dd>
-                        </div>
-                      )}
-                    </dl>
-                    <div className="mobile-record-actions">
-                      <Link to={"/" + kind + "/" + row._id}>
-                        View {config.singular} <ArrowUpRight size={13} />
-                      </Link>
-                      <button
-                        aria-label={"Edit " + config.singular}
-                        onClick={() => {
-                          setEditing(row);
-                          setNotice("");
-                        }}
-                      >
-                        <Pencil size={15} />
-                        Edit
-                      </button>
-                      <button
-                        className="danger icon-button"
-                        aria-label={"Delete " + config.singular}
-                        onClick={() => {
-                          del.reset();
-                          setDeleting(row);
-                        }}
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    </div>
-                  </article>
-                ))}
-              </div>
-            )}
+            <div className="mobile-records">
+              {q.data.items.map((row) => (
+                <MobileRecord
+                  key={row._id}
+                  kind={kind}
+                  row={row}
+                  onEdit={() => {
+                    setEditing(row);
+                    setNotice("");
+                  }}
+                  onDelete={() => {
+                    del.reset();
+                    setDeleting(row);
+                  }}
+                />
+              ))}
+            </div>
             <div className="pagination">
               <span>
                 {q.data.total} records · Page {page} of{" "}
@@ -756,7 +687,10 @@ export default function Records({ kind }) {
       {deleting && (
         <Modal
           title={"Delete " + config.singular + "?"}
-          onClose={() => setDeleting(null)}
+          busy={del.isPending}
+          onClose={() => {
+            if (!del.isPending) setDeleting(null);
+          }}
         >
           <p className="dialog-copy">
             This permanently removes the selected record. Records with dependent
@@ -764,7 +698,9 @@ export default function Records({ kind }) {
           </p>
           {del.error && <Message error>{del.error.message}</Message>}
           <div className="dialog-actions">
-            <button onClick={() => setDeleting(null)}>Cancel</button>
+            <button disabled={del.isPending} onClick={() => setDeleting(null)}>
+              Cancel
+            </button>
             <button
               className="danger-button"
               disabled={del.isPending}

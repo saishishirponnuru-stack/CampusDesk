@@ -10,7 +10,8 @@ test("core semantic colors keep AA text contrast in both themes", async ({
       const style = getComputedStyle(document.documentElement);
       const luminance = (name) => {
         let hex = style.getPropertyValue(name).trim().slice(1);
-        if (hex.length === 3) hex = [...hex].map((value) => value + value).join("");
+        if (hex.length === 3)
+          hex = [...hex].map((value) => value + value).join("");
         const rgb = [0, 2, 4]
           .map((i) => parseInt(hex.slice(i, i + 2), 16) / 255)
           .map((value) =>
