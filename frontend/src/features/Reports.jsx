@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { CoursePicker } from "../components/EntityCombobox";
 import { Download } from "lucide-react";
 import { Heading, SimpleTable, useData } from "../components/WorkspaceUI";
 import { Chart } from "../components/LazyChart";
@@ -50,14 +51,6 @@ export default function Reports() {
     [filters, setFilters] = useState(""),
     [courseSearch, setCourseSearch] = useState(""),
     [chosenCourse, setChosenCourse] = useState(null);
-  const search = useDebouncedValue(courseSearch);
-  const courses = useData(
-    ["report-courses", search],
-    "/courses?limit=30&search=" + encodeURIComponent(search),
-  );
-  const choices = [...(courses.data?.items || [])];
-  if (chosenCourse && !choices.some((item) => item._id === chosenCourse._id))
-    choices.unshift(chosenCourse);
   const q = useData(
       ["reports", filters],
       "/reports" + (filters ? "?" + filters : ""),
@@ -162,35 +155,15 @@ export default function Reports() {
             ))}
           </select>
         </div>
-        <label htmlFor="report-search">
-          Find report course
-          <input
-            id="report-search"
-            value={courseSearch}
-            placeholder="Search course code or name…"
-            onChange={(event) => setCourseSearch(event.target.value)}
-          />
-        </label>
-        <div className="report-filter-field">
-          <label htmlFor="report-course">Course</label>
-          <select
-            id="report-course"
-            value={draft.course}
-            onChange={(event) => {
-              setDraft({ ...draft, course: event.target.value });
-              setChosenCourse(
-                choices.find((item) => item._id === event.target.value) || null,
-              );
-            }}
-          >
-            <option value="">All courses</option>
-            {choices.map((item) => (
-              <option key={item._id} value={item._id}>
-                {item.code} · {item.name}
-              </option>
-            ))}
-          </select>
-        </div>
+        <CoursePicker
+          label="Course"
+          value={draft.course}
+          initialEntity={chosenCourse}
+          onChange={(id, item) => {
+            setDraft({ ...draft, course: id });
+            setChosenCourse(item);
+          }}
+        />
         <label htmlFor="report-from">
           Attendance from
           <input
@@ -246,7 +219,6 @@ export default function Reports() {
           selections restrict student distributions to non-withdrawn
           enrollments. Department and academic year are exact matches.
         </p>
-        {courses.error && <Message error>{courses.error.message}</Message>}
       </form>
       {notice && <Message error={notice.error}>{notice.text}</Message>}
       {q.isPending ? (

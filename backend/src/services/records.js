@@ -142,6 +142,22 @@ export function queryOptions(kind, query) {
     filter.$or = fields.map((field) => ({
       [field]: { $regex: search, $options: "i" },
     }));
+    if (kind === "students")
+      filter.$or.push({
+        $expr: {
+          $regexMatch: {
+            input: {
+              $concat: [
+                { $ifNull: ["$firstName", ""] },
+                " ",
+                { $ifNull: ["$lastName", ""] },
+              ],
+            },
+            regex: search,
+            options: "i",
+          },
+        },
+      });
   }
   const page = Math.max(1, Math.min(100000, parseInt(query.page) || 1));
   const limit = Math.max(1, Math.min(100, parseInt(query.limit) || 20));

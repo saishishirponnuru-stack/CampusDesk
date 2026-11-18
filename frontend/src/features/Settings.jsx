@@ -1,44 +1,29 @@
-import React, { useState, useEffect } from "react";
+import React, { useContext } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { LogOut } from "lucide-react";
 import { api } from "../api";
 import { Message } from "../components/Feedback";
 import { Heading } from "../components/WorkspaceUI";
+import { GradeThresholdEditor } from "../components/GradeThresholdEditor";
+import { useUnsavedChanges } from "../hooks/useUnsavedChanges";
+import { DirtyContext } from "../components/UnsavedWork";
 import { ThemeSettings } from "../components/Theme";
 export default function SettingsPage({ me, logout }) {
-  const qc = useQueryClient(),
-    { register, handleSubmit, reset } = useForm(),
-    [saved, setSaved] = useState(""),
-    [thresholds, setThresholds] = useState("");
-  useEffect(() => {
-    if (me.data)
-      setThresholds(
-        me.data.thresholds.map((t) => t.label + ":" + t.minimum).join(", "),
-      );
-  }, [me.data]);
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { isDirty },
+  } = useForm({ defaultValues: { currentPassword: "", newPassword: "" } });
+  const unsaved = useContext(DirtyContext);
+  useUnsavedChanges(isDirty);
   const password = useMutation({
     mutationFn: (v) =>
       api("/auth/password", { method: "POST", body: JSON.stringify(v) }),
     onSuccess: () => {
       reset();
       logout();
-    },
-  });
-  const grades = useMutation({
-    mutationFn: () =>
-      api("/auth/thresholds", {
-        method: "PUT",
-        body: JSON.stringify({
-          thresholds: thresholds.split(",").map((t) => {
-            const [label, minimum] = t.trim().split(":");
-            return { label, minimum: Number(minimum) };
-          }),
-        }),
-      }),
-    onSuccess: () => {
-      qc.invalidateQueries();
-      setSaved("Grade thresholds saved.");
     },
   });
   return (
@@ -69,6 +54,11 @@ export default function SettingsPage({ me, logout }) {
             </div>
             <button
               onClick={async () => {
+                if (
+                  unsaved &&
+                  !window.confirm("Discard unsaved changes and sign out?")
+                )
+                  return;
                 try {
                   await api("/auth/logout", { method: "POST" });
                 } finally {
@@ -114,39 +104,10 @@ export default function SettingsPage({ me, logout }) {
           </section>
         </div>
         <div className="settings-stack">
-          <section className="panel setting">
-            <h2>Grade thresholds</h2>
-            <p>
-              Format: label:minimum percentage. Include zero. Grades use the
-              highest qualifying threshold.
-            </p>
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                grades.mutate();
-              }}
-            >
-              <label>
-                Thresholds
-                <input
-                  required
-                  value={thresholds}
-                  onChange={(e) => {
-                    setThresholds(e.target.value);
-                    setSaved("");
-                  }}
-                />
-              </label>
-              {grades.error && <Message error>{grades.error.message}</Message>}
-              {saved && <Message>{saved}</Message>}
-              <button className="primary" disabled={grades.isPending}>
-                Save thresholds
-              </button>
-            </form>
-          </section>
+          {me.data && <GradeThresholdEditor thresholds={me.data.thresholds} />}
           <section className="panel setting">
             <h2>About CampusDesk</h2>
-            <p>CampusDesk Nova · 3.0</p>
+            <p>CampusDesk Nova · 4.0 Spectrum Edition</p>
             <p>
               Academic records, course administration, attendance, and
               assessment reporting.

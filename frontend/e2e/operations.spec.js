@@ -52,8 +52,10 @@ for (const theme of ["light", "dark"])
     }
     await navigate(page, "Attendance");
     await page.getByRole("link", { name: "Open register" }).click();
-    await page.getByLabel("Find a course", { exact: true }).fill(course.code);
-    await page.getByLabel("Course", { exact: true }).selectOption(course._id);
+    await page
+      .getByRole("combobox", { name: "Course", exact: true })
+      .fill(course.code);
+    await page.getByRole("option", { name: new RegExp(course.name) }).click();
     await page.getByLabel("Session date", { exact: true }).fill("2026-11-17");
     await expect(page.getByText("3 eligible", { exact: true })).toBeVisible();
     await page
@@ -151,6 +153,7 @@ for (const theme of ["light", "dark"])
     test.setTimeout(90000);
     if (test.info().project.name === "mobile")
       await page.setViewportSize({ width: 320, height: 900 });
+    page.on("dialog", (dialog) => dialog.accept());
     const headers = await login(page);
     await page.getByLabel("Color theme").selectOption(theme);
     await navigate(page, "Students");

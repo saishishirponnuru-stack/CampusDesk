@@ -1,0 +1,588 @@
+/* Nova Experience Lab: semantic interaction layer over the existing academic UI. */
+:root {
+  --iris: #6551cc;
+  --cyan: #16728b;
+  --amber: #896119;
+  --motion-press: 90ms;
+  --shadow-float: 0 8px 28px #252f4a12;
+}
+:root[data-theme="dark"] {
+  --iris: #c3b4ff;
+  --cyan: #80d6e9;
+  --amber: #efcf88;
+}
+.module-icon {
+  flex-shrink: 0;
+}
+.tone-iris {
+  color: var(--iris);
+}
+.tone-cyan {
+  color: var(--cyan);
+}
+.tone-mint {
+  color: var(--mint);
+}
+.tone-amber {
+  color: var(--amber);
+}
+button,
+.primary,
+.secondary-action,
+.icon-button {
+  transition:
+    background var(--motion-fast) var(--ease),
+    border-color var(--motion-fast) var(--ease),
+    box-shadow var(--motion-fast) var(--ease),
+    transform var(--motion-press) var(--ease);
+}
+button:not(:disabled):hover,
+.secondary-action:hover {
+  border-color: var(--accent);
+  box-shadow: var(--shadow);
+}
+button:not(:disabled):active,
+.primary:active,
+.secondary-action:active {
+  transform: translateY(1px);
+  box-shadow: none;
+}
+button:disabled {
+  cursor: not-allowed;
+}
+:where(button, a, input, select, summary):focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 3px;
+}
+input,
+select,
+.password-input {
+  transition:
+    border-color var(--motion-fast),
+    box-shadow var(--motion-fast);
+}
+input:focus,
+select:focus,
+.password-input:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+.password-input input:focus {
+  box-shadow: none;
+}
+.sidebar nav a {
+  position: relative;
+  transition:
+    background var(--motion-fast),
+    color var(--motion-fast);
+}
+.sidebar nav a[aria-current="page"]::before {
+  content: "";
+  position: absolute;
+  width: 3px;
+  height: 18px;
+  border-radius: 4px;
+  background: var(--accent);
+  left: 0;
+}
+.sidebar nav a:hover .module-icon {
+  transform: translateY(-1px);
+}
+.sidebar .module-icon {
+  transition: transform var(--motion-fast);
+}
+.page-heading h1 {
+  letter-spacing: -1.2px;
+}
+.panel {
+  box-shadow: 0 2px 8px #15213b03;
+}
+.student-avatar {
+  background: var(--accent-soft);
+  color: var(--accent);
+  border: 1px solid var(--border);
+}
+.course-code {
+  border-bottom: 1px solid var(--border-strong);
+  padding-bottom: 2px;
+}
+.directory-table tbody tr {
+  transition: background var(--motion-fast);
+}
+.directory-table tbody tr:focus-within {
+  background: var(--accent-soft);
+}
+.toolbar .search:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+.report-tabs button {
+  min-height: 42px;
+}
+.theme-preview[aria-pressed="true"] {
+  box-shadow: 0 0 0 2px var(--accent-soft);
+}
+.message {
+  animation: nova-feedback var(--motion) var(--ease);
+}
+@keyframes nova-feedback {
+  from {
+    opacity: 0;
+    transform: translateY(3px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.import-stepper {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  list-style: none;
+  padding: 0;
+  margin: 8px 0 30px;
+  gap: 12px;
+}
+.import-stepper li {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  color: var(--muted);
+  font-size: 11px;
+}
+.import-stepper li > span {
+  display: grid;
+  place-items: center;
+  width: 29px;
+  height: 29px;
+  border: 1px solid var(--border-strong);
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.import-stepper li[aria-current="step"] {
+  color: var(--accent);
+}
+.import-stepper li[aria-current="step"] > span {
+  background: var(--action);
+  color: var(--on-accent);
+  border-color: var(--action);
+  box-shadow: 0 0 0 4px var(--accent-soft);
+}
+.import-stepper li[data-complete="true"] > span {
+  color: var(--success);
+  background: var(--success-bg);
+  border-color: var(--success);
+}
+.import-intake {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(250px, 1fr);
+  gap: 24px;
+  margin-bottom: 24px;
+  align-items: stretch;
+}
+.file-dropzone {
+  position: relative;
+  min-width: 0;
+  padding: 38px 28px 24px;
+  border: 2px dashed var(--border-strong);
+  border-radius: var(--radius-lg);
+  text-align: center;
+  background: var(--surface);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  transition:
+    background var(--motion-fast),
+    border-color var(--motion-fast),
+    box-shadow var(--motion-fast);
+}
+.file-dropzone:hover,
+.file-dropzone:focus-within {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--surface) 94%, var(--accent));
+}
+.file-dropzone:focus-within {
+  outline: 3px solid var(--focus);
+  outline-offset: 4px;
+}
+.file-dropzone.is-dragging {
+  border-style: solid;
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  box-shadow:
+    inset 0 0 0 4px var(--surface),
+    0 0 0 4px var(--accent-soft);
+}
+.upload-emblem {
+  display: grid;
+  place-items: center;
+  width: 84px;
+  height: 84px;
+  border-radius: 25px;
+  background: var(--accent-soft);
+  margin-bottom: 22px;
+  transform: rotate(-5deg);
+  transition: transform var(--motion) var(--ease);
+}
+.file-dropzone:hover .upload-emblem,
+.is-dragging .upload-emblem {
+  transform: translateY(-3px) rotate(0);
+}
+.file-dropzone .eyebrow {
+  font-size: 9px;
+  letter-spacing: 1.8px;
+}
+.file-dropzone h2 {
+  font-size: clamp(20px, 2vw, 28px);
+  line-height: 1.3;
+  letter-spacing: -0.8px;
+  margin: 14px 0 12px;
+  overflow-wrap: anywhere;
+  max-width: 100%;
+}
+.file-dropzone p {
+  font-size: 12px;
+  max-width: 380px;
+}
+.upload-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin: 24px 0 16px;
+}
+.upload-actions button {
+  min-height: 44px;
+  padding-inline: 22px;
+}
+.file-dropzone small {
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.7;
+}
+.file-dropzone .upload-status {
+  min-height: 40px;
+  margin: 20px 0 0;
+  border-top: 1px solid var(--border);
+  padding-top: 16px;
+  width: 100%;
+  color: var(--muted);
+  font-size: 11px;
+}
+.upload-status .spinner {
+  display: inline-block;
+  vertical-align: middle;
+  margin-right: 8px;
+}
+.file-meta {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 7px;
+  color: var(--muted);
+}
+.file-meta > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--success);
+  margin-left: 5px;
+}
+.import-guide {
+  padding: 28px;
+  background: var(--surface);
+  display: flex;
+  flex-direction: column;
+}
+.import-guide h2 {
+  margin: 14px 0 12px;
+  font-size: 23px;
+  letter-spacing: -0.7px;
+  line-height: 1.3;
+}
+.import-guide p {
+  font-size: 12px;
+}
+.import-guide ol {
+  list-style: none;
+  padding: 0;
+  counter-reset: guide;
+  margin: 24px 0;
+}
+.import-guide li {
+  position: relative;
+  padding-left: 32px;
+  margin-bottom: 21px;
+  counter-increment: guide;
+}
+.import-guide li::before {
+  content: counter(guide, decimal-leading-zero);
+  position: absolute;
+  left: 0;
+  top: 0;
+  color: var(--accent);
+  font-size: 11px;
+  font-weight: 800;
+}
+.import-guide li strong {
+  display: block;
+  font-size: 12px;
+  margin-bottom: 6px;
+}
+.import-guide li span {
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.7;
+  display: block;
+}
+.import-guide button {
+  margin-top: auto;
+  min-height: 44px;
+}
+.import-guide > small {
+  display: block;
+  margin-top: 16px;
+  color: var(--muted);
+  line-height: 1.7;
+  font-size: 10px;
+}
+.import-summary > div {
+  border: 1px solid var(--border);
+  padding: 16px;
+  border-radius: 12px;
+  background: var(--surface-soft);
+}
+.import-summary > div:nth-child(2) {
+  color: var(--success);
+  background: var(--success-bg);
+}
+.import-summary > div:nth-child(3) {
+  color: var(--error);
+  background: var(--error-bg);
+}
+.import-summary > div:nth-child(4) {
+  color: var(--warning);
+  background: var(--warning-bg);
+}
+.import-summary span {
+  color: inherit;
+}
+.import-result {
+  padding: 48px 24px;
+  background: var(--success-bg);
+}
+.import-result > svg {
+  padding: 8px;
+  box-sizing: content-box;
+  border-radius: 50%;
+  border: 1px solid var(--success);
+  animation: nova-feedback 400ms var(--ease);
+}
+.import-result button {
+  margin: 0 12px 12px 0;
+}
+.attendance-choices label {
+  transition:
+    background var(--motion-fast),
+    border-color var(--motion-fast),
+    color var(--motion-fast);
+}
+.attendance-choices label[data-status="present"]:has(input:checked) {
+  color: var(--success);
+  background: var(--success-bg);
+  border-color: var(--success);
+}
+.attendance-choices label[data-status="absent"]:has(input:checked) {
+  color: var(--error);
+  background: var(--error-bg);
+  border-color: var(--error);
+}
+.attendance-choices label[data-status="late"]:has(input:checked) {
+  color: var(--warning);
+  background: var(--warning-bg);
+  border-color: var(--warning);
+}
+.attendance-choices label:hover {
+  border-color: var(--accent);
+}
+@media (max-width: 1100px) {
+  .import-intake {
+    grid-template-columns: 1fr;
+  }
+  .import-guide ol {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 16px;
+  }
+  .import-stepper li {
+    flex-direction: column;
+    text-align: center;
+    font-size: 10px;
+  }
+}
+@media (max-width: 640px) {
+  .import-stepper {
+    gap: 5px;
+    margin-bottom: 24px;
+  }
+  .import-stepper strong {
+    font-size: 9px;
+    font-weight: 600;
+    line-height: 1.5;
+  }
+  .import-stepper li > span {
+    width: 25px;
+    height: 25px;
+  }
+  .file-dropzone {
+    padding: 28px 16px 20px;
+  }
+  .upload-actions {
+    width: 100%;
+  }
+  .upload-actions button {
+    flex: 1;
+    padding-inline: 12px;
+  }
+  .import-guide {
+    padding: 22px;
+  }
+  .import-guide ol {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+  .import-guide h2 {
+    font-size: 21px;
+  }
+  .import-summary > div {
+    padding: 12px;
+  }
+  .import-summary strong {
+    font-size: 23px;
+  }
+  .password-input button {
+    min-width: 44px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+  button:active,
+  .primary:active,
+  .sidebar nav a:hover .module-icon,
+  .upload-emblem,
+  .file-dropzone:hover .upload-emblem {
+    transform: none;
+  }
+}
+.heading-identity {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.heading-identity > svg {
+  padding: 6px;
+  box-sizing: content-box;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+}
+.workflow-strip {
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+}
+.profile .avatar.large {
+  background: var(--accent-soft);
+  color: var(--accent);
+  border: 1px solid var(--border-strong);
+  border-radius: 20px;
+}
+.profile {
+  border-top: 3px solid var(--accent);
+}
+.form-section-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  letter-spacing: 0.2px;
+}
+.form-section-title::before {
+  content: "";
+  width: 5px;
+  height: 16px;
+  background: var(--accent);
+  border-radius: 3px;
+}
+.chart-data-row {
+  border-bottom: 1px solid var(--border);
+}
+.command-result:focus-visible {
+  background: var(--accent-soft);
+}
+@media (max-width: 640px) {
+  .heading-identity {
+    gap: 10px;
+  }
+  .heading-identity > svg {
+    width: 25px;
+    height: 25px;
+    padding: 5px;
+  }
+  .workflow-strip {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* After selection, let the preview lead; preparation stays available on demand. */
+.import-guide summary {
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--accent);
+  font-weight: 750;
+}
+.import-guide details[open] summary {
+  margin-bottom: 20px;
+}
+.import-guide details > small {
+  display: block;
+  margin-top: 16px;
+  color: var(--muted);
+  line-height: 1.7;
+  font-size: 10px;
+}
+.import-intake:has(.has-file) {
+  grid-template-columns: 1fr;
+  gap: 16px;
+}
+.import-intake:has(.has-file) .import-guide {
+  padding: 18px 24px;
+}
+.file-dropzone.has-file {
+  padding-block: 24px;
+}
+.has-file .upload-emblem {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  margin-bottom: 14px;
+}
+.has-file .upload-emblem svg {
+  width: 28px;
+  height: 28px;
+}
+.has-file h2 {
+  font-size: 22px;
+  margin-block: 10px;
+}
+.has-file .upload-actions {
+  margin-block: 16px 12px;
+}
+.has-file .upload-status {
+  margin-top: 12px;
+}

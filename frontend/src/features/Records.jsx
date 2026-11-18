@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useId } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useForm } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import {
@@ -18,33 +18,18 @@ import { modules, label } from "../config";
 import { Message, Loading, Empty, Modal } from "../components/Feedback";
 import { Heading, display, useData } from "../components/WorkspaceUI";
 import { MobileRecord } from "../components/MobileRecord";
+import { EntityCombobox, CoursePicker } from "../components/EntityCombobox";
+import { useUnsavedChanges } from "../hooks/useUnsavedChanges";
+import { ModuleIcon } from "../components/ModuleIcon";
 export function RecordForm({ kind, record, onClose }) {
   const formId = useId();
   const config = modules[kind],
     qc = useQueryClient();
-  const [relationSearch, setRelationSearch] = useState({
-    student: "",
-    course: "",
+  const [entities, setEntities] = useState({
+    student: record?.student || null,
+    course: record?.course || null,
   });
   const relationKind = ["enrollments", "attendance", "grades"].includes(kind);
-  const students = useQuery({
-    queryKey: ["student-options", relationSearch.student],
-    queryFn: () =>
-      api(
-        "/students?limit=100&search=" +
-          encodeURIComponent(relationSearch.student),
-      ),
-    enabled: relationKind,
-  });
-  const courses = useQuery({
-    queryKey: ["course-options", relationSearch.course],
-    queryFn: () =>
-      api(
-        "/courses?limit=100&search=" +
-          encodeURIComponent(relationSearch.course),
-      ),
-    enabled: relationKind,
-  });
   const shape = Object.fromEntries(
     config.fields.map((f) => [
       f.key,
@@ -91,6 +76,8 @@ export function RecordForm({ kind, record, onClose }) {
   );
   const {
     register,
+    control,
+    watch,
     handleSubmit,
     formState: { errors, isDirty },
   } = useForm({ defaultValues: defaults, resolver: zodResolver(schema) });
@@ -98,8 +85,14 @@ export function RecordForm({ kind, record, onClose }) {
     mutationFn: (values) =>
       api("/" + kind + (record ? "/" + record._id : ""), {
         method: record ? "PUT" : "POST",
+        ...(record?.updatedAt
+          ? { headers: { "If-Match": JSON.stringify(record.updatedAt) } }
+          : {}),
         body: JSON.stringify(values),
       }),
+    onError: (err) => {
+      if (err.status === 409) qc.invalidateQueries();
+    },
     onSuccess: () => {
       qc.invalidateQueries();
       onClose("Record saved successfully.");
@@ -109,22 +102,54 @@ export function RecordForm({ kind, record, onClose }) {
     if (mutation.isPending) return;
     if (!isDirty || window.confirm("Discard your unsaved changes?")) onClose();
   };
-  useEffect(() => {
-    if (!isDirty) return;
-    const warn = (event) => {
-      event.preventDefault();
-      event.returnValue = "";
-    };
-    window.addEventListener("beforeunload", warn);
-    return () => window.removeEventListener("beforeunload", warn);
-  }, [isDirty]);
+  useUnsavedChanges(isDirty);
+  const marks = watch("marks"),
+    maximum = watch("maxMarks"),
+    term = watch("term");
+  const mismatches = [];
+  if (entities.student && entities.course) {
+    for (const [key, name] of [
+      ["department", "department"],
+      ["academicYear", "academic year"],
+      ["semester", "semester"],
+    ]) {
+      if (
+        entities.student[key] != null &&
+        entities.course[key] != null &&
+        String(entities.student[key]) !== String(entities.course[key])
+      )
+        mismatches.push(
+          `Student ${name}: ${entities.student[key]}; course ${name}: ${entities.course[key]}.`,
+        );
+    }
+    if (
+      term &&
+      entities.course.academicYear &&
+      term !== entities.course.academicYear
+    )
+      mismatches.push(
+        `Term must match the course academic year (${entities.course.academicYear}).`,
+      );
+    if (
+      kind === "enrollments" &&
+      watch("status") === "active" &&
+      entities.student.status &&
+      entities.student.status !== "active"
+    )
+      mismatches.push("Active enrollment requires an active student.");
+  }
   return (
     <Modal
       title={(record ? "Edit " : "Add ") + config.singular}
       onClose={close}
       busy={mutation.isPending}
     >
-      <form onSubmit={handleSubmit((v) => mutation.mutate(v))}>
+      <form
+        onChangeCapture={() => {
+          if (mutation.error?.status === 422) mutation.reset();
+        }}
+        onSubmit={handleSubmit((v) => mutation.mutate(v))}
+      >
         <fieldset className="form-grid" disabled={mutation.isPending}>
           {config.fields.map((f, index) => (
             <React.Fragment key={f.key}>
@@ -168,62 +193,27 @@ export function RecordForm({ kind, record, onClose }) {
                     ))}
                   </select>
                 ) : ["student", "course"].includes(f.type) ? (
-                  <>
-                    <input
-                      aria-label={
-                        "Search " + f.label.toLowerCase() + " options"
-                      }
-                      placeholder={"Search " + f.label.toLowerCase() + "…"}
-                      value={relationSearch[f.type]}
-                      onChange={(e) =>
-                        setRelationSearch({
-                          ...relationSearch,
-                          [f.type]: e.target.value,
-                        })
-                      }
-                    />
-                    <select
-                      id={formId + f.key}
-                      aria-invalid={!!errors[f.key]}
-                      aria-describedby={
-                        errors[f.key] ? formId + f.key + "-error" : undefined
-                      }
-                      required
-                      {...register(f.key)}
-                    >
-                      <option value="">Select {f.label.toLowerCase()}</option>
-                      {record?.[f.key]?._id &&
-                        !(
-                          f.type === "student" ? students : courses
-                        ).data?.items.some(
-                          (o) => o._id === record[f.key]._id,
-                        ) && (
-                          <option value={record[f.key]._id}>
-                            {record[f.key].studentId || record[f.key].code}
-                          </option>
-                        )}
-                      {(f.type === "student"
-                        ? students
-                        : courses
-                      ).data?.items.map((o) => (
-                        <option value={o._id} key={o._id}>
-                          {f.type === "student"
-                            ? o.studentId +
-                              " · " +
-                              o.firstName +
-                              " " +
-                              o.lastName
-                            : o.code + " · " + o.name}
-                        </option>
-                      ))}
-                    </select>
-                    {(f.type === "student" ? students : courses).error && (
-                      <small className="field-error">
-                        Unable to load options
-                      </small>
+                  <Controller
+                    name={f.key}
+                    control={control}
+                    render={({ field }) => (
+                      <EntityCombobox
+                        kind={f.type === "student" ? "students" : "courses"}
+                        id={formId + f.key}
+                        value={field.value}
+                        initialEntity={record?.[f.key]}
+                        disabled={mutation.isPending}
+                        invalid={!!errors[f.key]}
+                        describedBy={
+                          errors[f.key] ? formId + f.key + "-error" : undefined
+                        }
+                        onChange={(id, entity) => {
+                          field.onChange(id);
+                          setEntities((old) => ({ ...old, [f.type]: entity }));
+                        }}
+                      />
                     )}
-                    <small>Search to find records beyond the first 100.</small>
-                  </>
+                  />
                 ) : (
                   <input
                     id={formId + f.key}
@@ -253,6 +243,49 @@ export function RecordForm({ kind, record, onClose }) {
               </div>
             </React.Fragment>
           ))}
+          {kind === "grades" && (
+            <div className="assessment-preview" aria-live="polite">
+              <strong>
+                {marks !== "" &&
+                maximum !== "" &&
+                Number.isFinite(Number(marks)) &&
+                Number(maximum) > 0 &&
+                Number(marks) >= 0 &&
+                Number(marks) <= Number(maximum)
+                  ? ((Number(marks) / Number(maximum)) * 100).toFixed(1) + "%"
+                  : "—"}
+              </strong>
+              <span>
+                Assessment percentage · recorded marks / maximum marks
+              </span>
+            </div>
+          )}
+          {relationKind && entities.student && entities.course && (
+            <div
+              className={
+                "compatibility" + (mismatches.length ? " has-mismatch" : "")
+              }
+              role="status"
+            >
+              <strong>
+                {mismatches.length
+                  ? "Check academic compatibility"
+                  : "Academic context matches"}
+              </strong>
+              {mismatches.length ? (
+                <ul>
+                  {mismatches.map((text) => (
+                    <li key={text}>{text}</li>
+                  ))}
+                </ul>
+              ) : (
+                <p>
+                  The API will verify enrollment and academic rules when you
+                  save.
+                </p>
+              )}
+            </div>
+          )}
         </fieldset>
         {relationKind && (
           <p className="info-note">
@@ -308,7 +341,8 @@ export default function Records({ kind }) {
     [order, setOrder] = useState("asc"),
     [editing, setEditing] = useState(null),
     [deleting, setDeleting] = useState(null),
-    [notice, setNotice] = useState("");
+    [notice, setNotice] = useState(""),
+    [view, setView] = useState("list");
   const [debounced, setDebounced] = useState(search);
   useEffect(() => {
     const incoming = new URLSearchParams(location.search);
@@ -335,13 +369,6 @@ export default function Records({ kind }) {
     sort,
     order,
     ...filters,
-  });
-  const [courseSearch, setCourseSearch] = useState("");
-  const courseOptions = useQuery({
-    queryKey: ["filter-courses", courseSearch],
-    queryFn: () =>
-      api("/courses?limit=100&search=" + encodeURIComponent(courseSearch)),
-    enabled: ["enrollments", "attendance", "grades"].includes(kind),
   });
   const capabilities = useQuery({
     queryKey: ["operation-capabilities"],
@@ -396,6 +423,26 @@ export default function Records({ kind }) {
       {notice && <Message>{notice}</Message>}
       <section className="panel records">
         <div className="toolbar">
+          {kind === "courses" && (
+            <div
+              role="group"
+              aria-label="Course layout"
+              className="view-toggle"
+            >
+              <button
+                aria-pressed={view === "list"}
+                onClick={() => setView("list")}
+              >
+                List
+              </button>
+              <button
+                aria-pressed={view === "cards"}
+                onClick={() => setView("cards")}
+              >
+                Cards
+              </button>
+            </div>
+          )}
           {["students", "courses"].includes(kind) && (
             <div className="search">
               <Search size={17} />
@@ -474,26 +521,12 @@ export default function Records({ kind }) {
             </select>
           )}
           {["enrollments", "attendance", "grades"].includes(kind) && (
-            <>
-              <input
-                aria-label="Search course filter options"
-                placeholder="Find a course…"
-                value={courseSearch}
-                onChange={(e) => setCourseSearch(e.target.value)}
-              />
-              <select
-                aria-label="Filter by course"
-                value={filters.course || ""}
-                onChange={(e) => change("course", e.target.value)}
-              >
-                <option value="">All courses</option>
-                {courseOptions.data?.items.map((c) => (
-                  <option value={c._id} key={c._id}>
-                    {c.code} · {c.name}
-                  </option>
-                ))}
-              </select>
-            </>
+            <CoursePicker
+              label="Filter by course"
+              value={filters.course || ""}
+              summary={false}
+              onChange={(id) => change("course", id)}
+            />
           )}
           {["enrollments", "grades"].includes(kind) && (
             <input
@@ -517,7 +550,6 @@ export default function Records({ kind }) {
                 setSearch("");
                 setDebounced("");
                 setFilters({});
-                setCourseSearch("");
                 setPage(1);
               }}
             >
@@ -554,6 +586,17 @@ export default function Records({ kind }) {
             {order === "asc" ? "↑ Asc" : "↓ Desc"}
           </button>
         </div>
+        {(search || Object.values(filters).some(Boolean)) && (
+          <div className="applied-chips" aria-label="Active directory filters">
+            {Object.entries({ ...filters, ...(search ? { search } : {}) })
+              .filter(([, v]) => v)
+              .map(([key, value]) => (
+                <span className="filter-chip" key={key}>
+                  {label(key)}: {value}
+                </span>
+              ))}
+          </div>
+        )}
         {q.isPending ? (
           <Loading />
         ) : q.error ? (
@@ -563,7 +606,43 @@ export default function Records({ kind }) {
           </div>
         ) : q.data.items.length ? (
           <>
-            <div className="table-scroll directory-table responsive-directory">
+            {kind === "courses" && view === "cards" && (
+              <div className="course-card-grid">
+                {q.data.items.map((c) => (
+                  <article className="course-card" key={c._id}>
+                    <ModuleIcon kind="courses" size={30} />
+                    <span className="badge">{c.code}</span>
+                    <h2>
+                      <Link to={"/courses/" + c._id}>{c.name}</Link>
+                    </h2>
+                    <dl>
+                      {[
+                        ["Department", c.department],
+                        ["Semester", c.semester],
+                        ["Credits", c.credits],
+                        ["Faculty", c.facultyName],
+                        ["Academic year", c.academicYear],
+                      ].map(([name, value]) => (
+                        <div key={name}>
+                          <dt>{name}</dt>
+                          <dd>{value}</dd>
+                        </div>
+                      ))}
+                    </dl>
+                    <div className="row-actions">
+                      <button onClick={() => setEditing(c)}>Edit course</button>
+                      <button className="danger" onClick={() => setDeleting(c)}>
+                        Delete course
+                      </button>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            )}
+            <div
+              className="table-scroll directory-table responsive-directory"
+              hidden={kind === "courses" && view === "cards"}
+            >
               <table>
                 <thead>
                   <tr>
@@ -637,7 +716,10 @@ export default function Records({ kind }) {
                 </tbody>
               </table>
             </div>
-            <div className="mobile-records">
+            <div
+              className="mobile-records"
+              hidden={kind === "courses" && view === "cards"}
+            >
               {q.data.items.map((row) => (
                 <MobileRecord
                   key={row._id}

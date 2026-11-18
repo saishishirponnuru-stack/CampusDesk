@@ -1,5 +1,12 @@
-import { useEffect } from "react";
+import { useEffect, useContext, useId } from "react";
+import { UnsavedContext } from "../components/UnsavedWork";
 export function useUnsavedChanges(dirty) {
+  const context = useContext(UnsavedContext),
+    id = useId();
+  useEffect(() => {
+    context?.register(id, dirty);
+    return () => context?.register(id, false);
+  }, [context, id, dirty]);
   useEffect(() => {
     if (!dirty) return;
     const unload = (event) => {
@@ -16,6 +23,7 @@ export function useUnsavedChanges(dirty) {
         new URL(link.href).hash
       )
         return;
+      if (context && new URL(link.href).origin === location.origin) return;
       if (!window.confirm("Discard your unsaved changes?")) {
         event.preventDefault();
         event.stopPropagation();
@@ -27,5 +35,5 @@ export function useUnsavedChanges(dirty) {
       window.removeEventListener("beforeunload", unload);
       document.removeEventListener("click", navigate, true);
     };
-  }, [dirty]);
+  }, [dirty, context]);
 }

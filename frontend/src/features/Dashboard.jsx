@@ -7,6 +7,10 @@ import { Message, Loading, Empty } from "../components/Feedback";
 import { Chart } from "../components/LazyChart";
 
 export default function Dashboard() {
+  const capabilities = useData(
+    ["operation-capabilities"],
+    "/operations/capabilities",
+  );
   const q = useData(["reports"], "/reports"),
     navigate = useNavigate();
   if (q.isPending) return <Loading />;
@@ -41,6 +45,65 @@ export default function Dashboard() {
           </Link>
         }
       />
+      <section className="spectrum-hero">
+        <div>
+          <span className="eyebrow">CAMPUSDESK SPECTRUM</span>
+          <h2>A clearer view of your campus.</h2>
+          <p>
+            People, learning and everyday progress. Connected through your
+            academic records.
+          </p>
+          <div className="hero-actions">
+            <Link
+              className="primary"
+              to={
+                capabilities.data?.atomicBatches
+                  ? "/attendance/register"
+                  : "/attendance"
+              }
+            >
+              {capabilities.data?.atomicBatches
+                ? "Open attendance register"
+                : "View attendance"}
+            </Link>
+            <Link className="secondary-action" to="/reports">
+              Explore reports
+            </Link>
+          </div>
+        </div>
+        <svg
+          className="hero-art"
+          viewBox="0 0 160 140"
+          fill="none"
+          aria-hidden="true"
+        >
+          <path
+            d="m80 8 64 36-64 36L16 44 80 8Z"
+            fill="var(--accent)"
+            fillOpacity=".18"
+            stroke="currentColor"
+          />
+          <path
+            d="M16 44v52l64 36V80L16 44Zm128 0v52l-64 36V80l64-36Z"
+            fill="var(--spectrum-blue)"
+            fillOpacity=".15"
+            stroke="currentColor"
+          />
+          <path
+            d="m44 61 36 20 36-20M80 30v29m-16-9 16 9 16-9"
+            stroke="var(--mint)"
+            strokeWidth="3"
+            strokeLinecap="round"
+          />
+          <circle
+            cx="130"
+            cy="19"
+            r="8"
+            fill="var(--spectrum-rose)"
+            fillOpacity=".5"
+          />
+        </svg>
+      </section>
       <div className="overview-note">
         <span className="dot" />
         From your academic records
@@ -160,6 +223,16 @@ export default function Dashboard() {
         aria-label="Quick actions"
       >
         {[
+          ...(capabilities.data?.atomicBatches
+            ? [
+                [
+                  "import",
+                  "Import students",
+                  "Preview before you save",
+                  "/students/import",
+                ],
+              ]
+            : []),
           [
             "courses",
             "Create a course",

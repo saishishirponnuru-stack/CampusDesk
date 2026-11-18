@@ -65,9 +65,9 @@ test("complete academic journey persists, reports, exports and revokes access", 
   await page.goto("/");
   await login();
   await nav("Settings");
-  await page
-    .getByLabel("Thresholds", { exact: true })
-    .fill("A:90, B:80, C:70, F:0");
+  await page.getByLabel("Grade label 1", { exact: true }).fill("A");
+  await page.getByLabel("Minimum percentage 1", { exact: true }).fill("90");
+  await page.getByLabel("Minimum percentage 2", { exact: true }).fill("81");
   await page.getByRole("button", { name: "Save thresholds" }).click();
   await expect(page.getByText("Grade thresholds saved.")).toBeVisible();
   await nav("Students");
@@ -107,10 +107,16 @@ test("complete academic journey persists, reports, exports and revokes access", 
   });
   const course = await save("courses");
   const relations = async () => {
-    await page.getByLabel("Search student options").fill(studentCode);
-    await page.getByLabel("Student", { exact: true }).selectOption(student._id);
-    await page.getByLabel("Search course options").fill(courseCode);
-    await page.getByLabel("Course", { exact: true }).selectOption(course._id);
+    await page
+      .getByRole("combobox", { name: "Student", exact: true })
+      .fill(studentCode);
+    await page.getByRole("option", { name: /Persisted Example/ }).click();
+    await page
+      .getByRole("combobox", { name: "Course", exact: true })
+      .fill(courseCode);
+    await page
+      .getByRole("option", { name: new RegExp("Lifecycle course " + suffix) })
+      .click();
   };
   await nav("Enrollments");
   await page
@@ -205,7 +211,15 @@ test("complete academic journey persists, reports, exports and revokes access", 
   expect(csv).toContain(course.name);
   expect(csv).toContain('"85"');
   await nav("Settings");
-  await page.getByLabel("Thresholds", { exact: true }).fill("Pass:80, Fail:0");
+  await expect(page.getByLabel("Grade label 1", {exact:true})).toBeVisible();
+  while ((await page.locator(".threshold-row").count()) > 2)
+    await page
+      .getByRole("button", { name: "Remove boundary 2", exact: true })
+      .click();
+  await page.getByLabel("Grade label 1", { exact: true }).fill("Pass");
+  await page.getByLabel("Minimum percentage 1", { exact: true }).fill("80");
+  await page.getByLabel("Grade label 2", { exact: true }).fill("Fail");
+  await page.getByLabel("Minimum percentage 2", { exact: true }).fill("0");
   await page.getByRole("button", { name: "Save thresholds" }).click();
   await expect(page.getByText("Grade thresholds saved.")).toBeVisible();
   await nav("Grades");

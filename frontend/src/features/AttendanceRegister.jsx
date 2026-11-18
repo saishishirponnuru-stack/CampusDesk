@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { ChevronLeft, ChevronRight, Check, Save } from "lucide-react";
 import { api } from "../api";
+import { CoursePicker } from "../components/EntityCombobox";
 import { Heading } from "../components/WorkspaceUI";
 import { Message, Loading, Empty, Modal } from "../components/Feedback";
 import { useDebouncedValue } from "../hooks/useDebouncedValue";
@@ -27,11 +28,6 @@ export default function AttendanceRegister() {
     queryFn: () => api("/operations/capabilities"),
     staleTime: 300000,
   });
-  const courses = useQuery({
-    queryKey: ["register-courses", debouncedSearch],
-    queryFn: () =>
-      api("/courses?limit=30&search=" + encodeURIComponent(debouncedSearch)),
-  });
   const register = useQuery({
     queryKey: ["attendance-register", course, date, page],
     queryFn: ({ signal }) =>
@@ -41,13 +37,6 @@ export default function AttendanceRegister() {
       ),
     enabled: !!course && !!date,
   });
-  const courseOptions = [...(courses.data?.items || [])];
-  if (
-    course &&
-    register.data?.course &&
-    !courseOptions.some((item) => item._id === course)
-  )
-    courseOptions.unshift(register.data.course);
   const dirty = Object.keys(draft).length > 0;
   useUnsavedChanges(dirty);
   const save = useMutation({
@@ -128,35 +117,19 @@ export default function AttendanceRegister() {
       ) : (
         <>
           <section className="panel register-context">
-            <label>
-              Find a course
-              <input
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-                placeholder="Search course code or name…"
-              />
-            </label>
-            <div className="register-context-field">
-              <label htmlFor="register-course">Course</label>
-              <select
-                id="register-course"
-                value={course}
-                disabled={save.isPending}
-                onChange={(event) =>
-                  context(() => {
-                    setCourse(event.target.value);
-                    setPage(1);
-                  })
-                }
-              >
-                <option value="">Choose a course</option>
-                {courseOptions.map((c) => (
-                  <option key={c._id} value={c._id}>
-                    {c.code} · {c.name}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <CoursePicker
+              label="Course"
+              id="register-course"
+              value={course}
+              initialEntity={register.data?.course}
+              disabled={save.isPending}
+              onChange={(id) =>
+                context(() => {
+                  setCourse(id);
+                  setPage(1);
+                })
+              }
+            />
             <label>
               Session date
               <input
@@ -173,12 +146,10 @@ export default function AttendanceRegister() {
               />
             </label>
             <p>
-              Search to find courses beyond the first 30. Only compatible
-              active/completed enrollments are eligible. Missing records stay
-              unmarked.
+              Search by course name or code. Only compatible active/completed
+              enrollments are eligible. Missing records stay unmarked.
             </p>
           </section>
-          {courses.error && <Message error>{courses.error.message}</Message>}
           {notice && <Message>{notice}</Message>}
           {(dirty || save.error) && (
             <div className="register-savebar">
@@ -309,7 +280,7 @@ export default function AttendanceRegister() {
                           {row.student.lastName}
                         </legend>
                         {["present", "absent", "late"].map((status) => (
-                          <label key={status}>
+                          <label key={status} data-status={status}>
                             <input
                               type="radio"
                               name={"attendance-" + id}

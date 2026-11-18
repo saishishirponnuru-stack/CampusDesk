@@ -16,7 +16,12 @@ export function Loading() {
   return (
     <div className="loading" role="status">
       <span className="spinner" />
-      Loading records…
+      <span>Loading records…</span>
+      <div className="loading-skeleton" aria-hidden="true">
+        <i />
+        <i />
+        <i />
+      </div>
     </div>
   );
 }
@@ -43,8 +48,13 @@ export function Modal({
   const dialog = useRef(null);
   useEffect(() => {
     const d = dialog.current;
+    const opener = document.activeElement;
     d.showModal();
-    return () => d.close();
+    return () => {
+      d.close();
+      if (opener instanceof HTMLElement && opener.isConnected)
+        opener.focus({ preventScroll: true });
+    };
   }, []);
   return (
     <dialog

@@ -20,8 +20,11 @@ export function routes(router, kind) {
   const populated = (query) =>
     ["enrollments", "attendance", "grades"].includes(kind)
       ? query
-          .populate("student", "firstName lastName studentId department")
-          .populate("course", "name code academicYear")
+          .populate(
+            "student",
+            "firstName lastName studentId rollNumber department semester section academicYear status",
+          )
+          .populate("course", "name code academicYear department semester")
       : query;
   router.get("/" + kind, async (req, res) => {
     const { filter, page, limit, sort } = queryOptions(kind, req.query);
@@ -71,6 +74,15 @@ export function routes(router, kind) {
     const record = await writeExclusive(async () => {
       const current = await Model.findById(req.params.id);
       if (!current) throw fail(404, "Record not found");
+      const expected = req.get("If-Match");
+      if (
+        expected &&
+        expected !== JSON.stringify(current.updatedAt.toISOString())
+      )
+        throw fail(
+          409,
+          "This record changed while you were editing. Your edits are retained. Close and reopen the editor to review the latest record before saving.",
+        );
       await checkUpdate(kind, current, data);
       await validateRelations(kind, data);
       Object.assign(current, data);

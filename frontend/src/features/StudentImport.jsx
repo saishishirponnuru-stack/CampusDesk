@@ -1,11 +1,12 @@
 import React, { useState, useRef } from "react";
 import { Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { ChevronLeft, Download, Upload, Check } from "lucide-react";
+import { ChevronLeft, Download, Check } from "lucide-react";
 import { api, downloadFile } from "../api";
 import { Heading } from "../components/WorkspaceUI";
 import { Message, Loading, Modal } from "../components/Feedback";
 import { useUnsavedChanges } from "../hooks/useUnsavedChanges";
+import { FileDropzone } from "../components/FileDropzone";
 const fields = [
   "studentId",
   "rollNumber",
@@ -39,6 +40,8 @@ export default function StudentImport() {
     generation = useRef(0),
     [csv, setCSV] = useState(""),
     [fileName, setFileName] = useState(""),
+    [fileInfo, setFileInfo] = useState(null),
+    [reading, setReading] = useState(false),
     [mapping, setMapping] = useState({}),
     [ignored, setIgnored] = useState([]),
     [preview, setPreview] = useState(null),
@@ -66,6 +69,7 @@ export default function StudentImport() {
       }),
     onSuccess: (data, variables) => {
       if (variables.generation !== generation.current) return;
+      setError("");
       setPreview(data);
       setMapping(data.mapping);
       setIgnored(data.ignoredColumns);
@@ -95,37 +99,90 @@ export default function StudentImport() {
       setReview(false);
     },
   });
-  const choose = async (event) => {
-    const file = event.target.files[0];
+  const reset = () => {
     generation.current++;
-    const current = generation.current;
     setError("");
     setPreview(null);
     setResult(null);
     setCSV("");
+    setFileName("");
+    setFileInfo(null);
+    setReading(false);
+    setStale(false);
     setMapping({});
     setIgnored([]);
+    setReview(false);
     setRequestId(crypto.randomUUID());
     save.reset();
-    if (!file) return;
+  };
+  const choose = async (files) => {
+    if (!files.length) return;
+    if (files.length !== 1) {
+      setError(
+        "Choose one CSV at a time. Your current selection is unchanged.",
+      );
+      return;
+    }
+    if (
+      csv &&
+      !result &&
+      !window.confirm("Replace your selected file and discard its preview?")
+    )
+      return;
+    reset();
+    const current = generation.current,
+      file = files[0];
     setFileName(file.name);
-    if (!file.name.toLowerCase().endsWith(".csv")) {
-      setError("Choose a UTF-8 .csv file.");
+    setFileInfo({ name: file.name, size: file.size });
+    if (
+      !file.name.toLowerCase().endsWith(".csv") ||
+      (file.type &&
+        ![
+          "text/csv",
+          "application/csv",
+          "application/vnd.ms-excel",
+          "text/plain",
+        ].includes(file.type))
+    ) {
+      setError(
+        "Choose a UTF-8 .csv file. Rename only if the file is actually CSV text.",
+      );
       return;
     }
     if (file.size > 65536) {
-      setError("Choose a CSV no larger than 64 KiB.");
+      setError(
+        "Choose a CSV no larger than 64 KiB (65,536 bytes). Split larger files into batches of up to 100 students.",
+      );
       return;
     }
+    if (!file.size) {
+      setError(
+        "This file is empty. Add the template headers and student rows, then replace it.",
+      );
+      return;
+    }
+    setReading(true);
     try {
       const value = await file.text();
       if (current !== generation.current) return;
+      setReading(false);
       setCSV(value);
       validate.mutate({ csv: value, ignoredColumns: [], generation: current });
     } catch {
-      if (current === generation.current)
+      if (current === generation.current) {
+        setReading(false);
         setError("The file could not be read. Choose it again.");
+      }
     }
+  };
+  const remove = () => {
+    if (
+      csv &&
+      !result &&
+      !window.confirm("Remove your selected file and discard its preview?")
+    )
+      return;
+    reset();
   };
   const remap = (field, header) => {
     generation.current++;
@@ -151,6 +208,10 @@ export default function StudentImport() {
     !stale &&
     !preview.errors.length &&
     !preview.summary.invalid &&
+    preview.summary.total > 0 &&
+    !error &&
+    !reading &&
+    !validate.isPending &&
     !result;
   return (
     <>
@@ -173,46 +234,122 @@ export default function StudentImport() {
         </Message>
       ) : (
         <>
-          <section className="panel import-upload">
-            <div>
-              <span className="quick-icon">
-                <Upload size={23} />
-              </span>
-              <h2>Start with a CSV</h2>
-              <p>
-                UTF-8 CSV · up to 100 students · maximum 64 KiB. All rows import
-                together; existing students are never overwritten. The template
-                has headers only, with no invented required values.
-              </p>
-              <button
-                onClick={() =>
-                  downloadFile(
-                    "/students/import/template.csv",
-                    "campusdesk-students-template.csv",
-                  ).catch((err) => setError(err.message))
+          <ol className="import-stepper" aria-label="Import progress">
+            {[
+              "Upload file",
+              "Match columns",
+              "Validate records",
+              "Review changes",
+              "Import complete",
+            ].map((step, i) => {
+              const stage = result
+                ? 4
+                : review
+                  ? 3
+                  : preview && !stale && !preview.errors.length
+                    ? 2
+                    : preview || stale
+                      ? 1
+                      : 0;
+              return (
+                <li
+                  key={step}
+                  aria-current={stage === i ? "step" : undefined}
+                  data-complete={stage > i}
+                >
+                  <span>
+                    {stage > i ? <Check size={15} aria-hidden="true" /> : i + 1}
+                  </span>
+                  <strong>{step}</strong>
+                </li>
+              );
+            })}
+          </ol>
+          {!result && (
+            <div className="import-intake">
+              <FileDropzone
+                file={fileInfo}
+                busy={reading || validate.isPending || save.isPending}
+                onSelect={choose}
+                onRemove={remove}
+                status={
+                  reading
+                    ? "Reading CSV on this device…"
+                    : validate.isPending
+                      ? "Validating records with the API…"
+                      : error
+                        ? "File needs attention. See the error below."
+                        : stale
+                          ? "Columns changed. Validate mapping to continue."
+                          : preview
+                            ? ready
+                              ? `${preview.summary.valid} valid rows. Review the preview, then choose Review import.`
+                              : "Validation needs attention. Check column mapping and row errors below."
+                            : undefined
                 }
-              >
-                <Download size={16} />
-                Download CSV template
-              </button>
-            </div>
-            <div className="import-file-field">
-              <label htmlFor="student-csv-file">Choose CSV file</label>
-              <input
-                id="student-csv-file"
-                type="file"
-                accept=".csv,text/csv"
-                disabled={validate.isPending || save.isPending}
-                onChange={choose}
               />
-              <small>
-                {fileName ||
-                  "Your file is validated by the API before confirmation."}
-              </small>
+              <aside className="panel import-guide">
+                <details open={!fileInfo}>
+                  <summary>Template &amp; import guidance</summary>
+                  <h2>Good records start here.</h2>
+                  <p>One file. A clear preview. You decide when to save.</p>
+                  <ol>
+                    <li>
+                      <strong>Use the official template</strong>
+                      <span>
+                        Keep the headings. Supply your own required student
+                        values.
+                      </span>
+                    </li>
+                    <li>
+                      <strong>Check every row</strong>
+                      <span>
+                        Match columns and resolve errors before continuing.
+                      </span>
+                    </li>
+                    <li>
+                      <strong>Confirm with confidence</strong>
+                      <span>
+                        All rows save together. Existing students are never
+                        overwritten; duplicates block the whole import.
+                      </span>
+                    </li>
+                  </ol>
+                  <button
+                    onClick={() =>
+                      downloadFile(
+                        "/students/import/template.csv",
+                        "campusdesk-students-template.csv",
+                      ).catch((err) => setError(err.message))
+                    }
+                  >
+                    <Download size={16} />
+                    Download CSV template
+                  </button>
+                  <small>
+                    File reading happens locally. Validation sends CSV content
+                    to your configured API, without creating records.
+                  </small>
+                </details>
+              </aside>
             </div>
-          </section>
+          )}
           {error && <Message error>{error}</Message>}
-          {validate.isPending && <Loading />}
+          {csv && error && !validate.isPending && (
+            <button
+              onClick={() => {
+                setError("");
+                validate.mutate({
+                  csv,
+                  mapping: preview ? mapping : undefined,
+                  ignoredColumns: ignored,
+                  generation: generation.current,
+                });
+              }}
+            >
+              Retry validation
+            </button>
+          )}
           {preview && !result && (
             <>
               <details
@@ -405,7 +542,7 @@ export default function StudentImport() {
             </>
           )}
           {result && (
-            <section className="panel import-result">
+            <section className="panel import-result" role="status">
               <Check size={30} />
               <h2>
                 {result.replayed
@@ -417,6 +554,7 @@ export default function StudentImport() {
                   ? "This confirmation was already processed. No additional records were created."
                   : `${result.created} students created together. Existing records were not changed.`}
               </p>
+              <button onClick={reset}>Start another import</button>
               <Link className="primary" to="/students">
                 View students
               </Link>
@@ -448,7 +586,10 @@ export default function StudentImport() {
                 <button
                   className="primary"
                   disabled={save.isPending}
-                  onClick={() => save.mutate()}
+                  onClick={() => {
+                    if (ready && !save.isPending && !validate.isPending)
+                      save.mutate();
+                  }}
                 >
                   {save.isPending
                     ? "Importing…"

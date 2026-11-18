@@ -55,25 +55,40 @@ export function Login({ onLogin }) {
         <div className="login-appearance">
           <ThemeSelector />
         </div>
-        <form onSubmit={handleSubmit((v) => mutation.mutate(v))}>
+        <form
+          aria-busy={mutation.isPending}
+          onSubmit={handleSubmit((v) => mutation.mutate(v))}
+        >
           <span className="eyebrow">Your academic workspace</span>
           <h1>Welcome back</h1>
           <p className="muted">Sign in to your CampusDesk workspace.</p>
           <label>
             Email address
             <input
+              aria-invalid={!!errors.email}
+              aria-describedby={errors.email ? "login-email-error" : undefined}
               autoComplete="username"
               type="email"
               {...register("email")}
             />
             {errors.email && (
-              <small className="field-error">{errors.email.message}</small>
+              <small
+                id="login-email-error"
+                role="alert"
+                className="field-error"
+              >
+                {errors.email.message}
+              </small>
             )}
           </label>
           <label htmlFor="login-password">Password</label>
           <span className="password-input">
             <input
               id="login-password"
+              aria-invalid={!!errors.password}
+              aria-describedby={
+                errors.password ? "login-password-error" : undefined
+              }
               type={visible ? "text" : "password"}
               autoComplete="current-password"
               {...register("password")}
@@ -88,7 +103,13 @@ export function Login({ onLogin }) {
             </button>
           </span>
           {errors.password && (
-            <small className="field-error">{errors.password.message}</small>
+            <small
+              id="login-password-error"
+              role="alert"
+              className="field-error"
+            >
+              {errors.password.message}
+            </small>
           )}
           {mutation.error && <Message error>{mutation.error.message}</Message>}
           <button className="primary" disabled={mutation.isPending}>

@@ -38,12 +38,15 @@ async function request(path, options = {}) {
       token = "";
       window.dispatchEvent(new Event("session-expired"));
     }
-    throw new Error(
+    const error = new Error(
       body.message ||
         (res.status >= 500
           ? "Service temporarily unavailable. Please try again shortly."
           : "Request failed"),
     );
+    error.status = res.status;
+    error.issues = body.issues;
+    throw error;
   }
   return res;
 }

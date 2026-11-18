@@ -3,6 +3,7 @@ import {
   ResponsiveContainer,
   BarChart,
   Bar,
+  Cell,
   XAxis,
   YAxis,
   Tooltip,
@@ -124,7 +125,22 @@ export default function Chart({
                     isAnimationActive={false}
                     radius={[5, 5, 0, 0]}
                     maxBarSize={44}
-                  />
+                  >
+                    {data.map((item, index) => (
+                      <Cell
+                        key={String(item._id) + index}
+                        fill={
+                          [
+                            "var(--accent)",
+                            "var(--spectrum-blue)",
+                            "var(--mint)",
+                            "var(--spectrum-rose)",
+                            "var(--spectrum-cyan)",
+                          ][index % 5]
+                        }
+                      />
+                    ))}
+                  </Bar>
                 </BarChart>
               )}
             </>

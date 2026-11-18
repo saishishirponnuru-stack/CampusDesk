@@ -6,6 +6,40 @@ const root = fileURLToPath(new URL("../", import.meta.url));
 const image =
   "mongo@sha256:4c65244b50910461b9641a76131f84a2dcfd4da487f928298cea626b3842842c";
 const name = "campusdesk-verify-" + randomBytes(6).toString("hex");
+const includes = [],
+  excludes = [],
+  forwarded = [];
+const requested = process.argv.slice(2);
+for (let i = 0; i < requested.length; i++) {
+  const arg = requested[i];
+  if (arg === "--grep" || arg === "--grep-invert")
+    (arg === "--grep" ? includes : excludes).push(requested[++i]);
+  else if (arg.startsWith("--grep=")) includes.push(arg.slice(7));
+  else if (arg.startsWith("--grep-invert=")) excludes.push(arg.slice(14));
+  else forwarded.push(arg);
+}
+function browserArgs(project, suite) {
+  const any = "[\\s\\S]*";
+  let pattern =
+    "^" +
+    (suite === "core"
+      ? "(?!" + any + "(?:Nova 4 upload|Spectrum ))"
+      : "(?=" +
+        any +
+        "(?:" +
+        (suite === "upload" ? "Nova 4 upload" : "Spectrum ") +
+        "))");
+  for (const value of includes) {
+    if (!value) throw new Error("Missing grep expression");
+    pattern += "(?=" + any + "(?:" + value + "))";
+  }
+  for (const value of excludes) {
+    if (!value) throw new Error("Missing grep-invert expression");
+    pattern += "(?!" + any + "(?:" + value + "))";
+  }
+  pattern += any + "$";
+  return ["--project=" + project, "--grep=" + pattern, ...forwarded];
+}
 function docker(args) {
   const r = spawnSync("docker", args, { encoding: "utf8" });
   if (r.status !== 0)
@@ -122,46 +156,61 @@ try {
   await run(["run", "build", "--prefix", "frontend"], env);
   // A fresh API/database per project preserves production's login limit and
   // prevents one project's logout from revoking another project's sessions.
+  let executed = 0;
   for (const project of ["desktop", "mobile"]) {
-    api = spawn(process.execPath, ["scripts/test-api.js"], {
-      cwd: root + "backend",
-      env,
-      stdio: ["inherit", "inherit", "inherit", "ipc"],
-      detached: true,
-    });
-    await new Promise((resolve, reject) => {
-      const timer = setTimeout(
-        () => reject(new Error("Owned API readiness timed out")),
-        15000,
+    for (const suite of ["spectrum", "core", "upload"]) {
+      const args = browserArgs(project, suite);
+      const discovery = spawnSync(
+        process.execPath,
+        ["node_modules/@playwright/test/cli.js", "test", "--list", ...args],
+        { cwd: root + "frontend", env, encoding: "utf8" },
       );
-      api.once("message", (message) => {
-        if (message.type === "ready") {
+      const count = Number(
+        discovery.stdout?.match(/Total:\s+(\d+) tests?/)?.[1],
+      );
+      if (count === 0) {
+        console.log(`No selected cases in ${project}/${suite}; group not run.`);
+        continue;
+      }
+      if (discovery.status !== 0 || !Number.isFinite(count))
+        throw new Error(
+          "Browser selection failed: " + (discovery.stderr || discovery.stdout),
+        );
+      api = spawn(process.execPath, ["scripts/test-api.js"], {
+        cwd: root + "backend",
+        env,
+        stdio: ["inherit", "inherit", "inherit", "ipc"],
+        detached: true,
+      });
+      await new Promise((resolve, reject) => {
+        const timer = setTimeout(
+          () => reject(new Error("Owned API readiness timed out")),
+          15000,
+        );
+        api.once("message", (message) => {
+          if (message.type === "ready") {
+            clearTimeout(timer);
+            resolve();
+          }
+        });
+        api.once("exit", () => {
           clearTimeout(timer);
-          resolve();
-        }
+          reject(new Error("Owned API exited before readiness"));
+        });
       });
-      api.once("exit", () => {
-        clearTimeout(timer);
-        reject(new Error("Owned API exited before readiness"));
+      if (!(await fetch("http://127.0.0.1:5000/api/health")).ok)
+        throw new Error("Owned API health check failed");
+      await run(["run", "test:e2e", "--prefix", "frontend", "--", ...args], {
+        ...env,
+        E2E_ARTIFACT_PROJECT: project,
       });
-    });
-    if (!(await fetch("http://127.0.0.1:5000/api/health")).ok)
-      throw new Error("Owned API health check failed");
-    await run(
-      [
-        "run",
-        "test:e2e",
-        "--prefix",
-        "frontend",
-        "--",
-        "--project=" + project,
-        ...process.argv.slice(2),
-      ],
-      { ...env, E2E_ARTIFACT_PROJECT: project },
-    );
-    await stopChild(api);
-    api = null;
+      executed += count;
+      await stopChild(api);
+      api = null;
+    }
   }
+  if (!executed)
+    throw new Error("No browser cases matched the requested selection");
 } catch (error) {
   console.error(error.message);
   process.exitCode = 1;

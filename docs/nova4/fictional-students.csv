@@ -1,0 +1,3 @@
+studentId,rollNumber,firstName,lastName,email,phone,department,academicYear,semester,batch,section,status
+LAB-IMPORT-1,LI-1,Rowan,Example,rowan-fictional@example.test,,Computing,2026-2027,1,2026,A,active
+LAB-IMPORT-2,LI-2,Quinn,Example,quinn-fictional@example.test,,Computing,2026-2027,1,2026,A,active

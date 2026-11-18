@@ -22,6 +22,12 @@ export default function StudentProfile() {
         title={student.firstName + " " + student.lastName}
         description={student.studentId + " · " + student.department}
       />
+      <div className="profile-overview">
+        <span className={"badge " + student.status}>{student.status}</span>
+        <span className="badge">Semester {student.semester}</span>
+        <span className="badge">{student.academicYear}</span>
+        <span className="badge">Section {student.section}</span>
+      </div>
       <section className="panel profile">
         <span className="student-avatar large">
           {student.firstName[0]}

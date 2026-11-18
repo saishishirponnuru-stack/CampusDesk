@@ -1,0 +1,77 @@
+{
+  "context": "Headless Chromium in isolated Linux cloud lab, local API and MongoDB; automation timings, not user-device latency or Core Web Vitals",
+  "navigation": [
+    {
+      "route": "Students",
+      "round": 1,
+      "clickToHeadingMs": 444
+    },
+    {
+      "route": "Courses",
+      "round": 1,
+      "clickToHeadingMs": 98
+    },
+    {
+      "route": "Reports",
+      "round": 1,
+      "clickToHeadingMs": 924
+    },
+    {
+      "route": "Students",
+      "round": 2,
+      "clickToHeadingMs": 197
+    },
+    {
+      "route": "Courses",
+      "round": 2,
+      "clickToHeadingMs": 111
+    },
+    {
+      "route": "Reports",
+      "round": 2,
+      "clickToHeadingMs": 157
+    }
+  ],
+  "loadMore": [
+    {
+      "page": 2,
+      "clickToSettledMs": 39
+    },
+    {
+      "page": 3,
+      "clickToSettledMs": 104
+    },
+    {
+      "page": 4,
+      "clickToSettledMs": 48
+    },
+    {
+      "page": 5,
+      "clickToSettledMs": 43
+    },
+    {
+      "page": 6,
+      "clickToSettledMs": 197
+    }
+  ],
+  "firstSearchIncludingDebounceMs": 331,
+  "renderedOptionsAfterPage6": 85,
+  "syntheticStudentsAdded": 105,
+  "largeRoster": {
+    "eligibleStudents": 105,
+    "renderedRowsPerPage": 25,
+    "selectionToRosterMs": 372,
+    "singleStatusClickToConfirmationMs": 148,
+    "markPageClickToConfirmationMs": 93,
+    "widthsWithoutDocumentOverflow": [
+      320,
+      375,
+      390,
+      768,
+      1024,
+      1366,
+      1440,
+      1920
+    ]
+  }
+}

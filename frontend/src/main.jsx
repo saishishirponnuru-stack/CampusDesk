@@ -1,4 +1,11 @@
-import React, { useState, useEffect, useRef, lazy, Suspense } from "react";
+import React, {
+  useContext,
+  useState,
+  useEffect,
+  useRef,
+  lazy,
+  Suspense,
+} from "react";
 import {
   Routes,
   Route,
@@ -25,6 +32,9 @@ import { Brand, AcademicIcon } from "./components/Brand";
 import { Login } from "./features/Login";
 import "./styles.css";
 import "./styles/operations.css";
+import "./styles/nova4.css";
+import "./styles/spectrum.css";
+import { DirtyContext } from "./components/UnsavedWork";
 const Dashboard = lazy(() => import("./features/Dashboard"));
 const AttendanceRegister = lazy(() => import("./features/AttendanceRegister"));
 const StudentImport = lazy(() => import("./features/StudentImport"));
@@ -52,6 +62,7 @@ export function App() {
   );
 }
 function Workspace() {
+  const unsaved = useContext(DirtyContext);
   const [signedIn, login] = useState(false),
     [mobile, setMobile] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
@@ -222,6 +233,11 @@ function Workspace() {
             aria-label="Log out"
             className="icon-button"
             onClick={async () => {
+              if (
+                unsaved &&
+                !window.confirm("Discard unsaved changes and sign out?")
+              )
+                return;
               try {
                 await api("/auth/logout", { method: "POST" });
               } finally {

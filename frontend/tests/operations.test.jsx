@@ -68,9 +68,11 @@ it("handles an empty session date without leaving the user in an infinite loadin
         : { items: [course] },
   );
   renderApp(<AttendanceRegister />);
-  await userEvent.selectOptions(
+  await userEvent.click(
     await screen.findByLabelText("Course", { exact: true }),
-    course._id,
+  );
+  await userEvent.click(
+    await screen.findByRole("option", { name: /Synthetic course/ }),
   );
   await screen.findByText("0 eligible");
   await userEvent.clear(screen.getByLabelText("Session date"));
@@ -104,9 +106,11 @@ it("keeps unsaved attendance when changing the context is cancelled", async () =
   );
   const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
   renderApp(<AttendanceRegister />);
-  await userEvent.selectOptions(
+  await userEvent.click(
     await screen.findByLabelText("Course", { exact: true }),
-    course._id,
+  );
+  await userEvent.click(
+    await screen.findByRole("option", { name: /Synthetic course/ }),
   );
   await userEvent.click(
     await screen.findByRole("button", {
@@ -114,13 +118,11 @@ it("keeps unsaved attendance when changing the context is cancelled", async () =
       exact: true,
     }),
   );
-  await userEvent.selectOptions(
-    screen.getByLabelText("Course", { exact: true }),
-    "",
-  );
+  await userEvent.click(screen.getByRole("button", { name: "Clear Course" }));
   expect(confirm).toHaveBeenCalled();
-  expect(screen.getByLabelText("Course", { exact: true })).toHaveValue(
-    course._id,
+  expect(screen.getByLabelText("Course", { exact: true })).toHaveAttribute(
+    "placeholder",
+    course.name,
   );
   expect(screen.getByText("1 unsaved changes")).toBeInTheDocument();
 });
@@ -136,9 +138,11 @@ it("recovers from a register fetch failure with an explicit retry", async () => 
         : { items: [course] },
   );
   renderApp(<AttendanceRegister />);
-  await userEvent.selectOptions(
+  await userEvent.click(
     await screen.findByLabelText("Course", { exact: true }),
-    course._id,
+  );
+  await userEvent.click(
+    await screen.findByRole("option", { name: /Synthetic course/ }),
   );
   expect(await screen.findByRole("alert")).toHaveTextContent(
     "Temporary register failure",

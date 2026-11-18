@@ -167,7 +167,12 @@ for (const theme of ["light", "dark"])
     await expect(
       page.getByRole("heading", { name: "Administrator profile" }),
     ).toBeVisible();
-    await expect(page.getByLabel("Thresholds")).toHaveValue("Pass:50, Fail:0");
+    await expect(page.getByLabel("Grade label 1", { exact: true })).toHaveValue(
+      "Pass",
+    );
+    await expect(
+      page.getByLabel("Minimum percentage 1", { exact: true }),
+    ).toHaveValue("50");
     await page.screenshot({
       path: `test-results/settings-${theme}-${test.info().project.name}.png`,
       fullPage: true,
