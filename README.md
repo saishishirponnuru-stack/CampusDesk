@@ -1,93 +1,122 @@
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="frontend/public/brand/logo-dark.svg">
-  <img src="frontend/public/brand/logo-light.svg" alt="CampusDesk" width="280">
-</picture>
+<p align="center">
+  <img src="frontend/public/brand/logo-light.svg" alt="CampusDesk" width="220" />
+</p>
 
-# CampusDesk Nova
+<h1 align="center">CampusDesk</h1>
+<p align="center"><strong>A connected workspace for academic administration.</strong></p>
+<p align="center">Students · Courses · Enrollments · Attendance · Assessments · Reports</p>
 
-A connected workspace for student records, courses, enrollment, attendance, assessments, and academic reporting. React/Vite on Vercel, one Express API on Render, MongoDB for persistent records.
+<p align="center">
+  <a href="https://campusdesk-nova.vercel.app">Live application</a> ·
+  <a href="docs/FSWD_CASE_STUDY.md">FSWD case study</a> ·
+  <a href="docs/ARCHITECTURE.md">Architecture</a> ·
+  <a href="docs/spectrum/TESTING.md">Test evidence</a>
+</p>
 
-![CampusDesk Nova dashboard](docs/screenshots/nova/dashboard-light.png)
+> **Release status:** The live application link points to the existing hosted CampusDesk instance. The Spectrum 4.0 release is on `feature/nova-4-experience-lab`; do **not** assume the live application is running Spectrum until the Vercel/Render deployment and end-to-end checks are confirmed.
 
-**Screenshot disclosure:** the dashboard above and original Nova gallery use fictional API-contract fixtures. The new Phase II gallery shows actual workflows backed by disposable local MongoDB. Neither gallery involves Atlas. Fixtures are confined to browser tests and never used by the application.
+## Overview
 
-## The workspace
+CampusDesk is a full-stack student information and academic management application developed as an individual Full Stack Web Development project. It replaces fragmented spreadsheet-based workflows with an administrator-facing interface backed by authenticated APIs and consistent academic relationships.
 
-- An original courtyard-C identity, custom SVG navigation and editorial illustrations, and self-hosted Manrope typography.
-- Light, dark, and live system appearance; selective glass navigation/search, solid record surfaces, reduced-motion and reduced-transparency support.
-- Keyboard workspace search (Ctrl/Cmd+K, arrows, Enter, Escape), a collapsible sidebar, and a focus-managed mobile drawer.
-- Database-driven dashboard metrics, weighted assessment results, accessible chart data, and contextual actions.
-- Validated student/course CRUD, searchable academic selectors, server pagination, mobile record cards, student history, and paginated course rosters.
-- Individual and atomic bulk attendance with an eligible course roster, review, conflict detection, and safe retries.
-- Validated student CSV upload, column mapping, read-only preview, atomic confirmation, and retry receipts.
-- Assessment management, grade thresholds, five filtered report categories, and authenticated spreadsheet-safe CSV exports.
-- Explicit administrator provisioning, 15-minute memory-only bearer sessions, logout/password revocation, exact-origin CORS, rate-limited login, and protected academic relationships.
+| Area | Implemented workflow |
+| --- | --- |
+| Dashboard | Database-driven summaries, actions, charts and workspace search |
+| Students and courses | Validated records, search, pagination, profiles and course rosters |
+| Enrollments | Academic compatibility checks and searchable entity pickers |
+| Attendance | Individual and atomic batch recording with conflict detection |
+| Assessments | Marks, weighted results and configurable grade boundaries |
+| CSV import | Drag-and-drop, column mapping, validation preview and atomic import |
+| Reports | Filtered academic analysis and safe authenticated CSV exports |
+| Interface | Responsive layouts, keyboard support, light/dark/system themes and unsaved-work protection |
 
-Phase II verifies academic persistence against owned disposable MongoDB, including authenticated browser journeys. Atlas was never accessed. Bulk operations require a replica set; the API remains a single instance. Durable audit history, faculty roles, PWA/offline behavior, and PDF export are deferred. [Phase II delivery report](docs/NOVA_PHASE_II.md) · [original Nova design delivery](docs/NOVA_DELIVERY.md).
+## Screenshots
 
-## Run in Codespaces or a cloud workspace
+Screenshots in the original project gallery show *fictional* test records, not real student information.
 
-Use Node 24. This environment is already isolated; use the existing checkout.
+![CampusDesk dashboard](docs/screenshots/nova/dashboard-light.png)
 
-```sh
-npm ci
-npm ci --prefix backend
-npm ci --prefix frontend
-npm run dev
+For screenshot sources, data provenance and additional views, see [SCREENSHOTS.md](docs/SCREENSHOTS.md).
+
+## Technology
+
+| Frontend | API | Database | Verification |
+| --- | --- | --- | --- |
+| React 19, Vite, React Router | Node.js, Express 5 | MongoDB, Mongoose | Node tests, Playwright, isolated MongoDB |
+| TanStack Query, React Hook Form, Zod | Validation, auth middleware, service layer | Unique indexes, aggregation and transactions | Desktop/mobile browser checks |
+| Recharts, accessible UI components | JWT administration, request controls | Academic relationship guards | Controlled performance observations |
+
+```text
+Browser (React / Vite)
+        │ HTTPS + in-memory bearer session
+        ▼
+Express REST API (single instance)
+        │ controllers · validation · domain services
+        ▼
+MongoDB (Atlas for hosting / disposable MongoDB for local review)
 ```
 
-Before starting, configure `backend/.env` from `.env.example`, or inject variables into the shell launching the root command. Required: `MONGODB_URI` and a cryptographically random `JWT_SECRET` of at least 32 characters. Never commit credentials or print their values. Secrets exported in another terminal are not inherited.
+A single API instance is an explicit integrity constraint. Do not scale the backend horizontally without revisiting distributed write coordination and transaction semantics.
 
-The root command starts Express on 5000 and Vite on 5173. Ctrl+C stops both process groups; if either service exits, its sibling stops. Vite refuses a busy port. Frontend hot reload works; restart the root command after backend changes. Individual service `npm run dev` commands remain available. Keep forwarded ports private.
+## Run the isolated prototype
 
-Provision administrators explicitly using `npm run admin:init --prefix backend` with securely supplied `ADMIN_EMAIL`, `ADMIN_PASSWORD` (12–128 characters) and `ADMIN_NAME`. Existing administrator passwords are preserved. Startup never seeds or provisions automatically.
+**Requirements:** Node.js 24, Docker, available localhost ports 5000 and 5173.
 
-### Isolated development and tests
+```bash
+npm ci
+MONGOMS_DISABLE_POSTINSTALL=1 npm ci --prefix backend
+npm ci --prefix frontend
+node scripts/nova4-preview.js
+```
 
-Root `npm run dev:local` starts a disposable/local MongoDB runner and frontend. Supply **synthetic** `ADMIN_EMAIL` and `ADMIN_PASSWORD`, and an isolated `LOCAL_DB_PATH`. `DEMO_DATA=yes` explicitly enables fictional seed records in that local database. It never uses the Atlas URI. Local data directories are not cloud persistence.
+Open **http://127.0.0.1:5173** after the launcher reports readiness. The launcher creates a **disposable test database containing fictional records** and is intended for controlled review, **not** for persistent use or connection to Atlas. The review credentials and details are in [the local-review guide](docs/nova4/REVIEW.md). Shutting down the launcher removes its owned disposable data.
 
-The original memory-server download remains denied by this cloud proxy. The verified alternative uses an official, digest-pinned MongoDB Docker container, loopback-only port and disposable storage. It never reads `MONGODB_URI` and cleans up only its own generated test databases/container. TLS and integrity verification remain enabled.
+## Testing
 
-```sh
-# Docker daemon + Node 24 + installed Chromium required
+Run all checks against an **owned isolated** database rather than a production MongoDB URI:
+
+```bash
 PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium npm run verify:isolated
 ```
 
-This command runs backend, frontend, supervisor, build, and desktop/mobile browser checks with generated synthetic credentials. See the [isolated interactive demo](docs/NOVA_PHASE_II.md#isolated-interactive-demonstration) for hands-on use without Atlas.
+The Spectrum verification report dated **17 November 2026** records **151 passing checks**: 67 backend, 42 frontend, 2 supervisor and 40 Chromium desktop/mobile browser cases. The feature commit `4f55aad` also completed a successful GitHub Actions workflow. These are **controlled test-environment results**, not production uptime, latency, browser-compatibility or accessibility certification.
 
-```sh
-npm run test:dev
-npm test --prefix backend
-npm test --prefix frontend
-npm run build
-PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium npm run test:e2e --prefix frontend
-```
+- [Implementation details](docs/spectrum/IMPLEMENTATION.md)
+- [Verification record](docs/spectrum/TESTING.md)
+- [Performance observations](docs/spectrum/PERFORMANCE.md)
+- [Deployment and rollback considerations](docs/DEPLOYMENT.md)
 
-If npm's default cache is not writable, append `--cache /tmp/campusdesk-npm` to installation commands. A browser binary may need installation on other machines. See [testing](docs/TESTING.md) for real database versus fixture test boundaries.
+## Release and deployment
 
-## Architecture and data policy
+The existing production checkout and the Spectrum experimental release are intentionally separate:
 
-```mermaid
-flowchart LR
-  React[React / Vite workspace] -->|HTTPS + memory bearer token| API[Express: one instance]
-  API --> DB[(MongoDB / Atlas)]
-  React --> Appearance[Local appearance preference]
-  Tests[Isolated integration tests] --> Disposable[(Disposable MongoDB)]
-```
+| Branch | Purpose |
+| --- | --- |
+| `main` | Repository default / initial README; not the current application source |
+| `campusdesk-implementation` | Previous working implementation / production baseline |
+| `feature/nova-4-experience-lab` | Latest Spectrum 4.0 source and FSWD documentation |
 
-Academic relationships must match department, semester, academic year and term. Database indexes prevent duplicate identifiers and academic records. Dependent history blocks parent deletion; there are no destructive cascades. Present and late count as attended; missing sessions are excluded. Weighted results use total marks / total maximum marks. No GPA is inferred.
+**Hosting design:** Vercel for the frontend, Render for one Express API instance and MongoDB Atlas for persistent storage. Environment secrets must be kept in the hosting dashboards, never in Git. Before promoting Spectrum, verify the exact hosted commit, frontend API origin, backend CORS, Atlas replica-set capabilities, live health endpoint and key workflows with *fictional* temporary records. Preserve a rollback path to `f5752a7`.
 
-**Run exactly one API instance.** Relationship-sensitive writes are serialized in one process; multi-instance or external concurrent writers require a transaction-aware coordination design before scaling. Refresh requires sign-in again by design; no authentication tokens enter localStorage.
+See [DEPLOYMENT.md](docs/DEPLOYMENT.md) for environment configuration and detailed deployment requirements. No public deployment of this branch is asserted here.
 
-## Engineering notes
+## Academic project
 
-- [Phase II functional delivery, verification, API policies and demo guide](docs/NOVA_PHASE_II.md)
-- [Original Nova design delivery](docs/NOVA_DELIVERY.md)
-- [Screenshot gallery](docs/SCREENSHOTS.md)
-- [Architecture](docs/ARCHITECTURE.md)
-- [Testing](docs/TESTING.md)
-- [Deployment: Atlas → Render → Vercel](docs/DEPLOYMENT.md)
-- [Progress](docs/PROGRESS.md)
-- [Case study](docs/CASE_STUDY.md)
+**CampusDesk — Design and Development of a Full-Stack Student Information and Academic Management System**
 
-Render and Vercel configurations are preserved. No public deployment or production verification is claimed. PR #1 stays the review destination on `campusdesk-implementation`. Font attribution and OFL license are shipped in `frontend/public/licenses`; brand source is in `frontend/src/components/Brand.jsx`.
+- **Student:** P. Sai Shishir — A24126552105
+- **Subject:** Full Stack Web Development (`23CM4121`)
+- **Guide:** Mr. P. Santosh Kumar
+- **Department:** CSE (AI & ML), ANITS
+- **Academic year:** 2026–2027
+- **Project:** Individual
+
+[Read the individual FSWD case study](docs/FSWD_CASE_STUDY.md).
+
+## Scope and limitations
+
+The documented build provides administrator-facing academic functions. It does **not** claim faculty/student role-based access, multi-institution tenancy, public registration, immutable audit-event history, email-based recovery, offline academic write support or verified production performance. Authentication sessions are intentionally short-lived and memory-only; refreshing the page requires sign-in again. Technical tradeoffs and planned enhancements are described in the engineering notes.
+
+---
+
+<sub>CampusDesk · Individual FSWD academic project · ANITS · 2026–2027</sub>
