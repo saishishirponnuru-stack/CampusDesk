@@ -1,0 +1,22 @@
+# Keep source text consistent across Windows, WSL and GitHub.
+# This prevents large formatting-only diffs on mixed-platform checkouts.
+* text=auto
+*.js text eol=lf
+*.jsx text eol=lf
+*.mjs text eol=lf
+*.json text eol=lf
+*.css text eol=lf
+*.html text eol=lf
+*.md text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.sh text eol=lf
+*.ps1 text eol=crlf
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.webp binary
+*.ico binary
+*.woff2 binary
+*.pdf binary
+*.docx binary
