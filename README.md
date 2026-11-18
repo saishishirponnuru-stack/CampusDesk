@@ -14,7 +14,7 @@
   <a href="docs/spectrum/TESTING.md">Test evidence</a>
 </p>
 
-> **Hosted demo:** The existing CampusDesk production URL has been observed displaying **4.0 Spectrum Edition** in Settings and loading student records. The exact current Vercel/Render production commits and end-to-end functionality should still be checked before treating the environment as fully verified. The release source is maintained on `feature/nova-4-experience-lab`.
+> **Hosted demo:** The existing CampusDesk production URL has been observed displaying **4.0 Spectrum Edition** in Settings and loading student records. The exact current Vercel/Render production commits and end-to-end functionality should still be checked before treating the environment as fully verified. The release source is available on `main`, with the experimental history retained on `feature/nova-4-experience-lab`.
 
 ## Overview
 
@@ -93,9 +93,9 @@ The existing production checkout and the Spectrum experimental release are inten
 
 | Branch | Purpose |
 | --- | --- |
-| `main` | Repository default / initial README; not the current application source |
+| `main` | Complete CampusDesk 4.0 application and current repository showcase |
 | `campusdesk-implementation` | Previous working implementation / production baseline |
-| `feature/nova-4-experience-lab` | Latest Spectrum 4.0 source and FSWD documentation |
+| `feature/nova-4-experience-lab` | Preserved Spectrum 4.0 development branch |
 
 **Hosting design:** Vercel for the frontend, Render for one Express API instance and MongoDB Atlas for persistent storage. Environment secrets must be kept in the hosting dashboards, never in Git. Before promoting Spectrum, verify the exact hosted commit, frontend API origin, backend CORS, Atlas replica-set capabilities, live health endpoint and key workflows with *fictional* temporary records. Preserve a rollback path to `f5752a7`.
 
