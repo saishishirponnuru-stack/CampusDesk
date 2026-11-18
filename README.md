@@ -9,11 +9,12 @@
 <p align="center">
   <a href="https://campusdesk-nova.vercel.app">Live application</a> ·
   <a href="docs/FSWD_CASE_STUDY.md">FSWD case study</a> ·
+  <a href="docs/EXTERNAL_DEMO.md">External demo guide</a> ·
   <a href="docs/ARCHITECTURE.md">Architecture</a> ·
   <a href="docs/spectrum/TESTING.md">Test evidence</a>
 </p>
 
-> **Release status:** The live application link points to the existing hosted CampusDesk instance. The Spectrum 4.0 release is on `feature/nova-4-experience-lab`; do **not** assume the live application is running Spectrum until the Vercel/Render deployment and end-to-end checks are confirmed.
+> **Hosted demo:** The existing CampusDesk production URL has been observed displaying **4.0 Spectrum Edition** in Settings and loading student records. The exact current Vercel/Render production commits and end-to-end functionality should still be checked before treating the environment as fully verified. The release source is maintained on `feature/nova-4-experience-lab`.
 
 ## Overview
 
@@ -98,7 +99,7 @@ The existing production checkout and the Spectrum experimental release are inten
 
 **Hosting design:** Vercel for the frontend, Render for one Express API instance and MongoDB Atlas for persistent storage. Environment secrets must be kept in the hosting dashboards, never in Git. Before promoting Spectrum, verify the exact hosted commit, frontend API origin, backend CORS, Atlas replica-set capabilities, live health endpoint and key workflows with *fictional* temporary records. Preserve a rollback path to `f5752a7`.
 
-See [DEPLOYMENT.md](docs/DEPLOYMENT.md) for environment configuration and detailed deployment requirements. No public deployment of this branch is asserted here.
+See [DEPLOYMENT.md](docs/DEPLOYMENT.md) for environment configuration and detailed deployment requirements. The hosted site has been observed showing the 4.0 interface; confirm exact deploy commit in hosting dashboards before announcing a release.
 
 ## Academic project
 
@@ -111,7 +112,7 @@ See [DEPLOYMENT.md](docs/DEPLOYMENT.md) for environment configuration and detail
 - **Academic year:** 2026–2027
 - **Project:** Individual
 
-[Read the individual FSWD case study](docs/FSWD_CASE_STUDY.md).
+[Read the individual FSWD case study](docs/FSWD_CASE_STUDY.md) · [External examination demo guide](docs/EXTERNAL_DEMO.md).
 
 ## Scope and limitations
 
